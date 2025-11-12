@@ -1,0 +1,63 @@
+# Ignore Git files
+.git
+.gitignore
+.gitattributes
+
+# Ignore documentation
+*.md
+!README.md
+docs/
+
+# Ignore development files
+.env.example
+.editorconfig
+.php-cs-fixer.php
+.styleci.yml
+phpunit.xml
+.phpunit.result.cache
+tests/
+
+# Ignore node modules and build files
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+vite.config.js
+postcss.config.js
+tailwind.config.js
+
+# Ignore storage files (they'll be created in container)
+storage/app/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+!storage/app/.gitignore
+!storage/framework/.gitignore
+!storage/logs/.gitignore
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore Docker files (to avoid recursion)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignore CI/CD files
+.github/
+
+# Ignore misc
+*.log
+vendor/
+bootstrap/cache/*
+!bootstrap/cache/.gitignore

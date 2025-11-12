@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # Application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yiire-auth-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - APP_NAME=${APP_NAME:-Yiire Auth}
+      - APP_ENV=${APP_ENV:-production}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_URL=${APP_URL:-http://localhost}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-yiire_auth}
+      - DB_USERNAME=${DB_USERNAME:-yiire}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      - CACHE_DRIVER=${CACHE_DRIVER:-redis}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
+      - SESSION_DRIVER=${SESSION_DRIVER:-redis}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "${APP_PORT:-8000}:80"
+    networks:
+      - yiire-network
+    depends_on:
+      - db
+      - redis
+
+  # Database service (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: yiire-auth-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-yiire_auth}
+      MYSQL_USER: ${DB_USERNAME:-yiire}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'no'
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - yiire-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis service
+  redis:
+    image: redis:7-alpine
+    container_name: yiire-auth-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - yiire-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # PostgreSQL (alternative to MySQL - optional)
+  postgres:
+    image: postgres:16-alpine
+    container_name: yiire-auth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-yiire_auth}
+      POSTGRES_USER: ${DB_USERNAME:-yiire}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - yiire-network
+    profiles:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-yiire}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Queue worker service
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yiire-auth-queue
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --timeout=90
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    networks:
+      - yiire-network
+    depends_on:
+      - db
+      - redis
+    profiles:
+      - queue
+
+  # Scheduler service
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yiire-auth-scheduler
+    restart: unless-stopped
+    command: sh -c "while [ true ]; do php artisan schedule:run --verbose --no-interaction & sleep 60; done"
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=db
+    networks:
+      - yiire-network
+    depends_on:
+      - db
+    profiles:
+      - scheduler
+
+networks:
+  yiire-network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local

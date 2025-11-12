@@ -1,0 +1,72 @@
+# Environment files
+.env
+.env.backup
+.env.production
+.env.*.php
+.env.php
+
+# Logs
+*.log
+/storage/logs/*
+!/storage/logs/.gitignore
+
+# IDE files
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+.phpactor.json
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/vendor
+/node_modules
+auth.json
+
+# Build files
+/public/build
+/public/hot
+/public/storage
+
+# Cache and temporary files
+.phpunit.result.cache
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+/storage/*.key
+/storage/pail
+/storage/framework/cache/*
+!/storage/framework/cache/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+
+# Laravel Homestead
+Homestead.json
+Homestead.yaml
+
+# Deployment files
+/docker-compose.override.yml
+.docker/
+
+# Coverage
+coverage/
+coverage.xml
+*.coverage
+
+# Package managers
+package-lock.json
+yarn.lock
+composer.lock
+
+# Misc
+npm-debug.log
+yarn-error.log
