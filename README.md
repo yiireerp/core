@@ -41,8 +41,8 @@ A production-ready Laravel-based multi-organization ERP core microservice with J
 
 ```bash
 # Clone the repository
-git clone https://github.com/yiire-erp/auth.git
-cd auth
+git clone https://github.com/yiireerp/core.git
+cd core
 
 # Install dependencies
 composer install
@@ -65,8 +65,8 @@ Visit `http://localhost:8000` and use the [demo credentials](#-demo-credentials)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yiire-erp/auth.git
-cd auth
+git clone https://github.com/yiireerp/core.git
+cd core
 
 # Copy environment file
 cp .env.example .env
@@ -111,7 +111,7 @@ Application will be available at `http://localhost:8000`
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
    DB_PORT=3306
-   DB_DATABASE=yiire_auth
+   DB_DATABASE=yiire_core
    DB_USERNAME=your_username
    DB_PASSWORD=your_password
    ```
@@ -202,11 +202,11 @@ For production, use the optimized Dockerfile:
 
 ```bash
 # Build production image
-docker build -t yiire/auth:latest .
+docker build -t yiire/core:latest .
 
 # Run container
 docker run -d \
-  --name yiire-auth \
+  --name yiire-core \
   -p 80:80 \
   -e APP_ENV=production \
   -e APP_DEBUG=false \
@@ -214,7 +214,7 @@ docker run -d \
   -e DB_DATABASE=your-db-name \
   -e DB_USERNAME=your-db-user \
   -e DB_PASSWORD=your-db-password \
-  yiire/auth:latest
+  yiire/core:latest
 ```
 
 ## 📚 API Documentation
@@ -302,9 +302,11 @@ After seeding the database, you can use these credentials:
 
 | Email | Password | Organizations | Role |
 |-------|----------|---------|------|
-| john@example.com | password | Acme (Admin), TechStart (User) | Admin/User |
-| jane@example.com | password | Acme (Moderator), TechStart (Moderator) | Moderator |
-| bob@example.com | password | TechStart (Admin) | Admin |
+| globaladmin@yiire.com | password | Acme (Admin), TechStart (Admin) | Global Admin |
+| superadmin@yiire.com | password | Acme (Super Admin), TechStart (Super Admin) | Super Admin |
+| useradmin@yiire.com | password | Acme (User Admin), TechStart (User Admin) | User Admin |
+| user@yiire.com | password | Acme (User), TechStart (User) | User |
+| client@yiire.com | password | Acme (Client), TechStart (Client) | Client |
 
 ### Example Login Request
 
@@ -312,9 +314,8 @@ After seeding the database, you can use these credentials:
 curl -X POST http://localhost:8000/api/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "john@example.com",
-    "password": "password",
-    "organization_id": "acme"
+    "email": "globaladmin@yiire.com",
+    "password": "password"
   }'
 ```
 
@@ -379,13 +380,13 @@ This project is open-sourced software licensed under the [MIT license](LICENSE).
 
 ## 📧 Support
 
-- **Issues:** [GitHub Issues](https://github.com/yiire-erp/auth/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yiire-erp/auth/discussions)
+- **Issues:** [GitHub Issues](https://github.com/yiireerp/core/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/yiireerp/core/discussions)
 - **Email:** team@yiire.com
 
 ---
 
 <p align="center">Made with ❤️ by the Yiire Team</p>
 <p align="center">
-  <a href="https://github.com/yiire-erp/auth">⭐ Star us on GitHub</a>
+  <a href="https://github.com/yiireerp/core">⭐ Star us on GitHub</a>
 </p>
