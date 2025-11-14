@@ -35,580 +35,284 @@ A production-ready Laravel-based multi-organization ERP core microservice with J
 - 🧪 **Test Coverage** - Authentication, RBAC, organizations, email, 2FA, password reset
 - 🏭 **Model Factories** - Easy test data generation
 
-- [Quick Start](#-quick-start)
+## 🚀 Quick Start
 
-- [Installation](#-installation)✅ **API-First Design** - RESTful API with complete documentation  ✅ **Role-Based Access Control (RBAC)**
+### Local Development
 
-- [Docker Deployment](#-docker-deployment)
-
-- [API Documentation](#-api-documentation)- 3 default roles: Admin, Moderator, User
-
-- [Architecture](#-architecture)
-
-- [Demo Credentials](#-demo-credentials)## Quick Start- 14 default permissions for user, post, and role management
-
-- [Contributing](#-contributing)
-
-- [License](#-license)- Assign permissions to roles
-
-
-
-## 🚀 Quick Start### Installation- Direct user permissions (overrides)
-
-
-
-### Local Development- Permission inheritance from roles
-
-
-
-```bash```bash
-
+```bash
 # Clone the repository
-
-git clone https://github.com/yiire-erp/auth.git# Install dependencies✅ **RESTful API**
-
+git clone https://github.com/yiire-erp/auth.git
 cd auth
-
-composer install- Complete authentication endpoints
 
 # Install dependencies
+composer install
 
-composer install- Role management CRUD
-
-
-
-# Setup environment# Copy environment file- Permission management CRUD
-
+# Setup environment
 cp .env.example .env
-
-php artisan key:generatecp .env.example .env- User management endpoints
-
+php artisan key:generate
 php artisan jwt:secret
 
-
-
 # Run migrations and seed demo data
-
-php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder# Generate application key✅ **Security**
-
-
-
-# Start development serverphp artisan key:generate- Password hashing with bcrypt
-
-php artisan serve
-
-```- Middleware-based route protection
-
-
-
-Visit `http://localhost:8000` and use the [demo credentials](#-demo-credentials) to login.# Generate JWT secret- Role and permission checking
-
-
-
-### Docker Deploymentphp artisan jwt:secret- Secure database relationships
-
-
-
-```bash
-
-# Clone the repository
-
-git clone https://github.com/yiire-erp/auth.git# Run migrations and seed demo data## Quick Start
-
-cd auth
-
 php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder
 
-# Copy environment file
-
-cp .env.example .env### 1. Install Dependencies
-
-
-
-# Build and start containers# Start development server```bash
-
-docker-compose up -d
-
-php artisan servecomposer install
-
-# Run migrations inside container
-
-docker-compose exec app php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder``````
-
-
-
-# Generate keys inside container
-
-docker-compose exec app php artisan key:generate
-
-docker-compose exec app php artisan jwt:secret### Demo Credentials### 2. Environment Setup
-
+# Start development server
+php artisan serve
 ```
 
+Visit `http://localhost:8000` and use the [demo credentials](#-demo-credentials) to login.
+
+### Docker Deployment
+
 ```bash
+# Clone the repository
+git clone https://github.com/yiire-erp/auth.git
+cd auth
+
+# Copy environment file
+cp .env.example .env
+
+# Build and start containers
+docker-compose up -d
+
+# Run migrations inside container
+docker-compose exec app php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder
+
+# Generate keys inside container
+docker-compose exec app php artisan key:generate
+docker-compose exec app php artisan jwt:secret
+```
 
 Application will be available at `http://localhost:8000`
 
-```cp .env.example .env
-
 ## 📦 Installation
-
-Email: john@example.comphp artisan key:generate
 
 ### Requirements
 
-Password: password```
-
 - PHP 8.2 or higher
-
-- ComposerOrganizations: Acme Corporation (Admin), TechStart Inc (User)
-
+- Composer
 - MySQL 8.0+ / PostgreSQL 16+ / SQLite
-
-- Redis (optional, for caching and queues)Configure your database in `.env`:
-
+- Redis (optional, for caching and queues)
 - Node.js and npm (for frontend assets)
-
-Email: jane@example.com  ```
 
 ### Step-by-Step Setup
 
-Password: passwordDB_CONNECTION=mysql
-
 1. **Install PHP Dependencies**
-
-   ```bashOrganizations: Acme Corporation (Moderator), TechStart Inc (Moderator)DB_HOST=127.0.0.1
-
-   composer install
-
-   ```DB_PORT=3306
-
-
-
-2. **Environment Configuration**Email: bob@example.comDB_DATABASE=yiire
-
    ```bash
-
-   cp .env.example .envPassword: passwordDB_USERNAME=root
-
+   composer install
    ```
 
-   Organizations: TechStart Inc (Admin)DB_PASSWORD=
-
+2. **Environment Configuration**
+   ```bash
+   cp .env.example .env
+   ```
+   
    Update `.env` with your database credentials:
-
-   ```env``````
-
+   ```env
    DB_CONNECTION=mysql
-
    DB_HOST=127.0.0.1
-
    DB_PORT=3306
-
-   DB_DATABASE=yiire_auth## Documentation### 3. Run Migrations & Seeders
-
+   DB_DATABASE=yiire_auth
    DB_USERNAME=your_username
-
-   DB_PASSWORD=your_password```bash
-
+   DB_PASSWORD=your_password
    ```
-
-📖 **[Complete Documentation](./docs/)** - All guides and referencesphp artisan migrate
 
 3. **Generate Application Keys**
-
-   ```bashphp artisan db:seed --class=RolePermissionSeeder
-
+   ```bash
    php artisan key:generate
-
-   php artisan jwt:secret### Quick Links```
-
+   php artisan jwt:secret
    ```
-
-
 
 4. **Run Database Migrations**
-
-   ```bash- **[Getting Started Guide](./docs/GETTING_STARTED.md)** - Installation and setup### 4. Start Development Server
-
-   php artisan migrate
-
-   ```- **[Authentication Guide](./docs/AUTHENTICATION.md)** - JWT auth and multi-organization login```bash
-
-
-
-5. **Seed Demo Data (Optional)**- **[API Reference](./docs/API_REFERENCE.md)** - Complete endpoint documentationphp artisan serve
-
    ```bash
-
-   php artisan db:seed --class=MultiOrganizationSeeder- **[User Management](./docs/USER_MANAGEMENT.md)** - Profile management features```
-
+   php artisan migrate
    ```
 
-- **[Multi-Organization Guide](./docs/MULTI_ORGANIZATION.md)** - Organization and RBAC management
+5. **Seed Demo Data (Optional)**
+   ```bash
+   php artisan db:seed --class=MultiOrganizationSeeder
+   ```
 
 6. **Install Frontend Dependencies (Optional)**
-
-   ```bash### 5. Create Your First Admin
-
+   ```bash
    npm install
-
-   npm run build## Example API Usage```bash
-
+   npm run build
    ```
 
-php artisan tinker
-
 7. **Start Development Server**
-
-   ```bash### Login>>> $user = User::create(['name' => 'Admin', 'email' => 'admin@test.com', 'password' => Hash::make('password')]);
-
+   ```bash
    php artisan serve
+   ```
 
-   ``````bash>>> $user->assignRole('admin');
+## 🐳 Docker Deployment
 
+### Using Docker Compose
 
+The project includes a complete Docker setup with MySQL, Redis, and Nginx.
 
-## 🐳 Docker Deploymentcurl -X POST http://localhost:8000/api/login \>>> exit
-
-
-
-### Using Docker Compose  -H "Content-Type: application/json" \```
-
-
-
-The project includes a complete Docker setup with MySQL, Redis, and Nginx.  -d '{
-
-
-
-**Start all services:**    "email": "john@example.com",## API Endpoints
-
+**Start all services:**
 ```bash
-
-docker-compose up -d    "password": "password",
-
+docker-compose up -d
 ```
-
-    "organization_id": "acme"### Public Endpoints
 
 **View logs:**
-
-```bash  }'- `POST /api/register` - Register new user
-
+```bash
 docker-compose logs -f app
-
-``````- `POST /api/login` - Login user
-
-
+```
 
 **Stop services:**
-
 ```bash
-
-docker-compose down### Response### Protected Endpoints
-
+docker-compose down
 ```
-
-```json- `GET /api/user` - Get authenticated user
 
 **Rebuild containers:**
-
-```bash{- `GET /api/me` - Get user with roles & permissions
-
+```bash
 docker-compose build --no-cache
-
-docker-compose up -d  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGci...",- `POST /api/logout` - Logout user
-
+docker-compose up -d
 ```
-
-  "token_type": "Bearer",
 
 ### Services Included
 
-  "expires_in": 3600,### Admin Endpoints
-
 | Service | Port | Description |
-
-|---------|------|-------------|  "current_organization": {- `GET /api/users` - List all users
-
+|---------|------|-------------|
 | **app** | 8000 | Laravel application with Nginx + PHP-FPM |
-
-| **db** | 3306 | MySQL 8.0 database |    "id": "019a77f4-54f3-72c3-beec-c8b1a59dbc23",- `GET /api/roles` - Manage roles
-
+| **db** | 3306 | MySQL 8.0 database |
 | **redis** | 6379 | Redis for caching and queues |
+| **postgres** | 5432 | PostgreSQL (optional, use profile) |
 
-| **postgres** | 5432 | PostgreSQL (optional, use profile) |    "name": "Acme Corporation",- `GET /api/permissions` - Manage permissions
+### Optional Services
 
-
-
-### Optional Services    "roles": [{"id": 1, "name": "Administrator", "slug": "admin"}],- And more... (see full docs)
-
-
-
-**Start with PostgreSQL instead of MySQL:**    "permissions": [...]
-
+**Start with PostgreSQL instead of MySQL:**
 ```bash
-
-docker-compose --profile postgres up -d  },## Documentation
-
+docker-compose --profile postgres up -d
 ```
-
-  "organizations": [...]
 
 **Start with queue worker:**
-
-```bash}📖 **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed setup instructions
-
-docker-compose --profile queue up -d
-
-``````
-
-
-
-**Start with scheduler:**📖 **[ROLES_AND_PERMISSIONS.md](ROLES_AND_PERMISSIONS.md)** - Complete RBAC documentation
-
 ```bash
-
-docker-compose --profile scheduler up -d## Architecture
-
+docker-compose --profile queue up -d
 ```
 
-📖 **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference guide
+**Start with scheduler:**
+```bash
+docker-compose --profile scheduler up -d
+```
 
 ### Production Deployment
 
-```
-
 For production, use the optimized Dockerfile:
 
-Users ──┬── Organization A (Admin) ──┬── Roles ──┬── Permissions📖 **[AUTH_API_DOCUMENTATION.md](AUTH_API_DOCUMENTATION.md)** - API documentation
-
 ```bash
-
-# Build production image        │                      │           └── manage-users
-
+# Build production image
 docker build -t yiire/auth:latest .
 
-        │                      └── Users## Usage Examples
-
 # Run container
-
-docker run -d \        │
-
+docker run -d \
   --name yiire-auth \
-
-  -p 80:80 \        └── Organization B (User) ───┬── Roles ──┬── Permissions### Check User Roles
-
+  -p 80:80 \
   -e APP_ENV=production \
-
-  -e APP_DEBUG=false \                               │           └── view-posts```php
-
+  -e APP_DEBUG=false \
   -e DB_HOST=your-db-host \
-
-  -e DB_DATABASE=your-db-name \                               └── Usersif ($user->hasRole('admin')) {
-
+  -e DB_DATABASE=your-db-name \
   -e DB_USERNAME=your-db-user \
-
-  -e DB_PASSWORD=your-db-password \```    // User is admin
-
+  -e DB_PASSWORD=your-db-password \
   yiire/auth:latest
+```
 
-```}
-
-
-
-## 📚 API Documentation## Technology Stack```
-
-
+## 📚 API Documentation
 
 ### Authentication Endpoints
 
-
-
-| Method | Endpoint | Description |- **Laravel 12.x** - PHP Framework### Check Permissions
-
+| Method | Endpoint | Description |
 |--------|----------|-------------|
-
-| POST | `/api/register` | Register new user |- **JWT Auth** - Token-based authentication```php
-
+| POST | `/api/register` | Register new user |
 | POST | `/api/login` | Login with email/password |
-
-| POST | `/api/logout` | Logout and invalidate token |- **SQLite/MySQL/PostgreSQL** - Databaseif ($user->hasPermission('edit-posts')) {
-
+| POST | `/api/logout` | Logout and invalidate token |
 | GET | `/api/user` | Get current authenticated user |
+| POST | `/api/switch-organization` | Switch to different organization |
 
-| POST | `/api/switch-organization` | Switch to different organization |- **PHP 8.2+** - Programming Language    // User can edit posts
+### User Profile Endpoints
 
-
-
-### User Profile Endpoints}
-
-
-
-| Method | Endpoint | Description |## Key Features```
-
+| Method | Endpoint | Description |
 |--------|----------|-------------|
-
 | GET | `/api/me` | Get complete user profile |
-
 | PUT | `/api/profile` | Update profile information |
-
-| POST | `/api/profile/avatar` | Upload avatar image |### Multi-Organization Support### Protect Routes
-
+| POST | `/api/profile/avatar` | Upload avatar image |
 | DELETE | `/api/profile/avatar` | Delete avatar |
-
-| PUT | `/api/profile/password` | Change password |- Users belong to multiple organizations```php
-
+| PUT | `/api/profile/password` | Change password |
 | PUT | `/api/profile/preferences` | Update user preferences |
-
-- Different roles per organizationRoute::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
 ### Organization Management
 
-- Isolated data per organization    // Admin only routes
-
 | Method | Endpoint | Description |
-
-|--------|----------|-------------|});
-
+|--------|----------|-------------|
 | GET | `/api/organizations` | List user's organizations |
-
-| POST | `/api/organizations` | Create new organization |### Security```
-
+| POST | `/api/organizations` | Create new organization |
 | GET | `/api/organizations/{id}` | Get organization details |
-
-| PUT | `/api/organizations/{id}` | Update organization |- JWT tokens with embedded permissions
-
+| PUT | `/api/organizations/{id}` | Update organization |
 | POST | `/api/organizations/{id}/add-user` | Add user to organization |
+| POST | `/api/organizations/{id}/remove-user` | Remove user from organization |
 
-| POST | `/api/organizations/{id}/remove-user` | Remove user from organization |- UUID-based organization IDs (non-enumerable)### API Testing
+### Roles & Permissions (Admin Only)
 
+All role and permission endpoints require admin privileges and organization context via `X-Organization-ID` header.
 
+**Complete API documentation:** [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 
-### Roles & Permissions (Admin Only)- Password hashing with bcrypt```bash
+**Postman Collection:** [postman_collection.json](postman_collection.json)
 
+## 🏗️ Architecture
 
+### Multi-Organization Model
 
-All role and permission endpoints require admin privileges and organization context via `X-Organization-ID` header.- Soft deletes for data retention# Register
-
-
-
-**Complete API documentation:** [docs/API_REFERENCE.md](docs/API_REFERENCE.md)- Last login trackingcurl -X POST http://localhost:8000/api/register \
-
-
-
-**Postman Collection:** [postman_collection.json](postman_collection.json)  -H "Content-Type: application/json" \
-
-
-
-## 🏗️ Architecture### User Management  -d '{"name": "John", "email": "john@test.com", "password": "password123", "password_confirmation": "password123"}'
-
-
-
-### Multi-Organization Model- 20+ profile fields
-
-
-
-```- Avatar upload support# Login
-
+```
 Users ──┬── Organization A (Admin) ──┬── Roles ──┬── Permissions
-
-        │                      │           └── manage-users- Timezone and language preferencescurl -X POST http://localhost:8000/api/login \
-
+        │                      │           └── manage-users
         │                      └── Users
-
-        │- Custom JSON preferences  -H "Content-Type: application/json" \
-
+        │
         └── Organization B (User) ───┬── Roles ──┬── Permissions
-
-                               │           └── view-posts- Password change functionality  -d '{"email": "john@test.com", "password": "password123"}'
-
+                               │           └── view-posts
                                └── Users
+```
 
-``````
+### Database Schema
 
-
-
-### Database Schema## License
-
-
-
-- **users** - User accounts with 20+ profile fields## Default Roles
-
+- **users** - User accounts with 20+ profile fields
 - **organizations** - Organizations with UUID primary keys
-
-- **roles** - Organization-scoped rolesMIT License
-
+- **roles** - Organization-scoped roles
 - **permissions** - Organization-scoped permissions
-
-- **organization_user** - User-organization relationships- **Admin** - Full system access (all permissions)
-
+- **organization_user** - User-organization relationships
 - **role_user** - User-role assignments (per organization)
-
-- **permission_role** - Role-permission assignments---- **Moderator** - Content moderation access
-
+- **permission_role** - Role-permission assignments
 - **permission_user** - Direct user permissions
-
-- **User** - Basic access (assigned to new registrations)
 
 ### JWT Token Structure
 
-**Version:** 1.0.0  
-
 ```json
-
-{**Last Updated:** November 12, 2025  ## Default Permissions
-
+{
   "sub": 1,
-
-  "organization_id": "019a77f4-54f3-72c3-beec-c8b1a59dbc23",**Laravel:** 12.x | **PHP:** 8.2+
-
+  "organization_id": "019a77f4-54f3-72c3-beec-c8b1a59dbc23",
   "roles": ["admin"],
-
-  "permissions": ["manage-users", "manage-roles", "..."],**User Management:** view-users, create-users, edit-users, delete-users
-
+  "permissions": ["manage-users", "manage-roles", "..."],
   "exp": 1699876543
-
-}**Post Management:** view-posts, create-posts, edit-posts, delete-posts
-
+}
 ```
-
-**Role Management:** view-roles, create-roles, edit-roles, delete-roles, assign-roles, assign-permissions
 
 ## 🔐 Demo Credentials
 
-## Technology Stack
-
 After seeding the database, you can use these credentials:
 
-- Laravel 12.x
-
-| Email | Password | Organizations | Role |- Laravel Sanctum 4.x
-
-|-------|----------|---------|------|- PHP 8.2+
-
-| john@example.com | password | Acme (Admin), TechStart (User) | Admin/User |- MySQL/SQLite
-
-| jane@example.com | password | Acme (Moderator), TechStart (Moderator) | Moderator |- RESTful API
-
+| Email | Password | Organizations | Role |
+|-------|----------|---------|------|
+| john@example.com | password | Acme (Admin), TechStart (User) | Admin/User |
+| jane@example.com | password | Acme (Moderator), TechStart (Moderator) | Moderator |
 | bob@example.com | password | TechStart (Admin) | Admin |
-
-## License
 
 ### Example Login Request
 
-MIT License
-
 ```bash
-
-curl -X POST http://localhost:8000/api/login \---
-
+curl -X POST http://localhost:8000/api/login \
   -H "Content-Type: application/json" \
-
-  -d '{<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
+  -d '{
     "email": "john@example.com",
-
     "password": "password",
     "organization_id": "acme"
   }'
