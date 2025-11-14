@@ -3,21 +3,40 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
 {
     /**
      * Display a listing of users.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles', 'permissions')->get();
-        return response()->json($users);
+        // Get tenant from JWT token for filtering
+        $organizationId = null;
+        try {
+            $payload = JWTAuth::parseToken()->getPayload();
+            $organizationId = $payload->get('organization_id');
+        } catch (\Exception $e) {
+            // JWT not available
+        }
+
+        // Get paginated users (in production, you might want to filter by tenant)
+        $users = User::with(['roles' => function ($query) use ($organizationId) {
+            if ($organizationId) {
+                $query->wherePivot('organization_id', $organizationId);
+            }
+        }, 'tenants'])
+        ->paginate($request->get('per_page', 15));
+        
+        return UserResource::collection($users);
     }
 
     /**
@@ -27,9 +46,25 @@ class UserController extends Controller
     {
         $user = User::with('roles.permissions', 'permissions')->findOrFail($id);
         
+        // Get tenant from JWT token
+        $allPermissions = [];
+        try {
+            $payload = JWTAuth::parseToken()->getPayload();
+            $organizationId = $payload->get('organization_id');
+            
+            if ($organizationId) {
+                $organization = Organization::find($organizationId);
+                if ($organization) {
+                    $allPermissions = $user->getAllPermissionsInTenant($organization);
+                }
+            }
+        } catch (\Exception $e) {
+            // JWT not available or invalid, return empty permissions
+        }
+        
         return response()->json([
-            'user' => $user,
-            'all_permissions' => $user->getAllPermissions(),
+            'user' => new UserResource($user->load('roles', 'organizations')),
+            'all_permissions' => $allPermissions,
         ]);
     }
 
@@ -40,31 +75,7 @@ class UserController extends Controller
     {
         $user = $request->user();
         
-        return response()->json([
-            'id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'full_name' => $user->full_name,
-            'initials' => $user->initials,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'avatar' => $user->avatar ? Storage::url($user->avatar) : null,
-            'date_of_birth' => $user->date_of_birth,
-            'gender' => $user->gender,
-            'address_line1' => $user->address_line1,
-            'address_line2' => $user->address_line2,
-            'city' => $user->city,
-            'state' => $user->state,
-            'postal_code' => $user->postal_code,
-            'country' => $user->country,
-            'timezone' => $user->timezone,
-            'language' => $user->language,
-            'bio' => $user->bio,
-            'preferences' => $user->preferences,
-            'is_active' => $user->is_active,
-            'last_login_at' => $user->last_login_at,
-            'created_at' => $user->created_at,
-        ]);
+        return new UserResource($user->load('roles', 'organizations'));
     }
 
     /**

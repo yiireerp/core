@@ -161,7 +161,7 @@ feat: Add user avatar upload functionality
 fix: Resolve JWT token expiration issue
 docs: Update API documentation for roles endpoint
 refactor: Simplify permission checking logic
-test: Add tests for multi-tenant context switching
+test: Add tests for multi-organization context switching
 ```
 
 Use conventional commit prefixes:

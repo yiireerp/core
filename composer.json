@@ -1,13 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "yiire/auth",
+    "name": "yiire/core",
     "type": "project",
-    "description": "Multi-tenant authorization microservice with JWT authentication, RBAC, and comprehensive user management built on Laravel.",
+    "description": "SaaS ERP authentication and authorization microservice with multi-organization support, JWT authentication, RBAC, module management, and billing integration for user-based and module-based subscriptions.",
     "keywords": [
         "laravel",
         "authentication",
         "authorization",
-        "multi-tenant",
+        "multi-organization",
         "jwt",
         "rbac",
         "role-based-access-control",
@@ -15,7 +15,9 @@
         "microservice",
         "api",
         "oauth",
-        "sanctum"
+        "sanctum",
+        "erp",
+        "modules"
     ],
     "license": "MIT",
     "authors": [
@@ -24,17 +26,19 @@
             "email": "team@yiire.com"
         }
     ],
-    "homepage": "https://github.com/yiire-erp/auth",
+    "homepage": "https://github.com/yiire-erp/core",
     "support": {
-        "issues": "https://github.com/yiire-erp/auth/issues",
-        "source": "https://github.com/yiire-erp/auth",
-        "docs": "https://github.com/yiire-erp/auth#readme"
+        "issues": "https://github.com/yiire-erp/core/issues",
+        "source": "https://github.com/yiire-erp/core",
+        "docs": "https://github.com/yiire-erp/core#readme"
     },
     "require": {
         "php": "^8.2",
+        "bacon/bacon-qr-code": "^3.0",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
+        "pragmarx/google2fa": "^9.0",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {
@@ -51,7 +55,10 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": [
+            "app/Helpers/timezone.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

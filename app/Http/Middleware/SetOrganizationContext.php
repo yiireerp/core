@@ -2,12 +2,12 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Tenant;
+use App\Models\Organization;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class SetTenantContext
+class SetOrganizationContext
 {
     /**
      * Handle an incoming request.
@@ -17,26 +17,26 @@ class SetTenantContext
     public function handle(Request $request, Closure $next): Response
     {
         // Get tenant from header, subdomain, or request parameter
-        $tenantId = $request->header('X-Tenant-ID') 
-            ?? $request->input('tenant_id')
+        $organizationId = $request->header('X-Organization-ID') 
+            ?? $request->input('organization_id')
             ?? $this->getTenantFromSubdomain($request);
 
-        if ($tenantId) {
-            $tenant = is_numeric($tenantId) 
-                ? Tenant::find($tenantId) 
-                : Tenant::where('slug', $tenantId)->first();
+        if ($organizationId) {
+            $organization = is_numeric($organizationId) 
+                ? Organization::find($organizationId) 
+                : Organization::where('slug', $organizationId)->first();
 
-            if ($tenant && $tenant->is_active) {
+            if ($organization && $organization->is_active) {
                 // Check if user belongs to this tenant
-                if ($request->user() && !$request->user()->belongsToTenant($tenant)) {
+                if ($request->user() && !$request->user()->belongsToOrganization($organization)) {
                     return response()->json([
                         'message' => 'You do not have access to this tenant.'
                     ], 403);
                 }
 
                 // Set tenant in request
-                $request->attributes->set('tenant', $tenant);
-                app()->instance('tenant', $tenant);
+                $request->attributes->set('organization', $organization);
+                app()->instance('organization', $organization);
             } else {
                 return response()->json([
                     'message' => 'Invalid or inactive tenant.'

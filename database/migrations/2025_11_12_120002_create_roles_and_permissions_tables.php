@@ -9,20 +9,47 @@ return new class extends Migration
     /**
      * Run the migrations.
      * 
-     * Creates the permissions table with tenant-scoping support.
+     * Creates roles and permissions tables with organization-scoping support.
+     * Includes all pivot tables for RBAC functionality.
      */
     public function up(): void
     {
-        Schema::create('permissions', function (Blueprint $table) {
+        // Create roles table
+        Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->uuid('tenant_id')->nullable();
+            $table->string('organization_id', 50)->nullable(); // String to support 'global'
             $table->string('name');
             $table->string('slug');
             $table->text('description')->nullable();
             $table->timestamps();
 
-            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
-            $table->unique(['tenant_id', 'slug']);
+            $table->unique(['organization_id', 'slug']);
+            $table->index('organization_id');
+        });
+
+        // Create permissions table
+        Schema::create('permissions', function (Blueprint $table) {
+            $table->id();
+            $table->string('organization_id', 50)->nullable(); // String to support 'global'
+            $table->string('name');
+            $table->string('slug');
+            $table->text('description')->nullable();
+            $table->timestamps();
+
+            $table->unique(['organization_id', 'slug']);
+            $table->index('organization_id');
+        });
+
+        // Create role_user pivot table (users have different roles per organization)
+        Schema::create('role_user', function (Blueprint $table) {
+            $table->id();
+            $table->string('organization_id', 50)->nullable();
+            $table->foreignId('role_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->timestamps();
+
+            $table->unique(['organization_id', 'role_id', 'user_id']);
+            $table->index('organization_id');
         });
 
         // Create permission_role pivot table (roles have permissions)
@@ -53,6 +80,8 @@ return new class extends Migration
     {
         Schema::dropIfExists('permission_user');
         Schema::dropIfExists('permission_role');
+        Schema::dropIfExists('role_user');
         Schema::dropIfExists('permissions');
+        Schema::dropIfExists('roles');
     }
 };

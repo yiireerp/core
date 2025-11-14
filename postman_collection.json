@@ -1,14 +1,24 @@
 {
 	"info": {
-		"_postman_id": "multi-tenant-auth-api",
-		"name": "Multi-Tenant Authorization API",
-		"description": "Complete API collection for the Multi-Tenant Authorization Microservice with JWT authentication, RBAC, and user management.\n\n**Base URL:** `http://localhost:8000/api`\n\n**Demo Credentials:**\n- Email: `john@example.com` | Password: `password`\n- Email: `jane@example.com` | Password: `password`\n- Email: `bob@example.com` | Password: `password`",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "multi-tenant-auth"
+		"_postman_id": "yiire-core-api-v2",
+		"name": "Yiire Core API - Complete Collection",
+		"description": "**Comprehensive API collection for Yiire Multi-Organization ERP Core Microservice**\n\n## Features Covered:\n- 🔐 Authentication (JWT)\n- 👤 User Management\n- 🏢 Organizations\n- 🎭 Roles & Permissions\n- 👥 Teams\n- 📦 Modules\n- 💳 Billing\n- 🛡️ Security (2FA, Email Verification, Password Reset)\n\n## Base URL\n`http://localhost:8000/api`\n\n## Environment Variables Required:\n- `base_url` - API base URL\n- `jwt_token` - Auto-populated on login\n- `current_organization_id` - Auto-populated on login\n\n## Demo Credentials:\n- **Super Admin:** john@yiire.com | password\n- **Moderator:** jane@yiire.com | password\n- **User:** bob@yiire.com | password\n\n**Version:** 2.0.0  \n**Last Updated:** November 13, 2025",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
 	},
 	"item": [
 		{
-			"name": "Authentication",
+			"name": "🔐 Authentication",
+			"description": "JWT-based authentication endpoints with multi-organization support",
 			"item": [
 				{
 					"name": "Register",
@@ -17,29 +27,19 @@
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"first_name\": \"Alice\",\n    \"last_name\": \"Johnson\",\n    \"email\": \"alice@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"phone\": \"+1-555-0199\",\n    \"date_of_birth\": \"1995-03-20\",\n    \"gender\": \"female\",\n    \"timezone\": \"America/New_York\",\n    \"language\": \"en\"\n}"
+							"raw": "{\n  \"first_name\": \"Alice\",\n  \"last_name\": \"Johnson\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirmation\": \"SecurePass123!\",\n  \"phone\": \"+1-555-0199\",\n  \"date_of_birth\": \"1995-03-20\",\n  \"gender\": \"female\",\n  \"timezone\": \"America/New_York\",\n  \"language\": \"en\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/register",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"register"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["register"]
 						},
-						"description": "Register a new user account with enhanced profile information."
+						"description": "Register a new user with enhanced profile fields"
 					},
 					"response": []
 				},
@@ -50,85 +50,98 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Save the JWT token to environment variable",
 									"if (pm.response.code === 200) {",
-									"    var jsonData = pm.response.json();",
-									"    pm.environment.set(\"jwt_token\", jsonData.access_token);",
-									"    ",
-									"    // Save current organization ID",
-									"    if (jsonData.current_organization) {",
-									"        pm.environment.set(\"current_tenant_id\", jsonData.current_organization.id);",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('jwt_token', response.access_token);",
+									"    pm.environment.set('refresh_token', response.refresh_token || response.access_token);",
+									"    if (response.current_organization) {",
+									"        pm.environment.set('current_organization_id', response.current_organization.id);",
+									"        pm.environment.set('organization_slug', response.current_organization.slug);",
 									"    }",
-									"    ",
-									"    console.log(\"Token saved:\", jsonData.access_token);",
+									"    console.log('✅ Logged in successfully');",
+									"    console.log('Token:', response.access_token.substring(0, 20) + '...');",
 									"}"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password\",\n    \"tenant_id\": \"acme\"\n}"
+							"raw": "{\n  \"email\": \"john@yiire.com\",\n  \"password\": \"password\",\n  \"organization_id\": \"acme\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/login",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"login"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["login"]
 						},
-						"description": "Login with email and password. Optionally specify tenant_id (UUID or slug) to select initial organization. Returns JWT token with embedded roles and permissions."
+						"description": "Login with email, password, and optional organization ID/slug"
 					},
 					"response": []
 				},
 				{
 					"name": "Get Current User",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
-							"raw": "{{base_url}}/user",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"user"
-							]
+							"raw": "{{base_url}}/me",
+							"host": ["{{base_url}}"],
+							"path": ["me"]
 						},
-						"description": "Get current authenticated user with organization context from JWT token."
+						"description": "Get authenticated user information with current organization context"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('jwt_token', response.access_token);",
+									"    console.log('✅ Token refreshed');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["refresh"]
+						},
+						"description": "Refresh JWT token to get a new access token"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/logout",
+							"host": ["{{base_url}}"],
+							"path": ["logout"]
+						},
+						"description": "Logout and blacklist current token"
 					},
 					"response": []
 				},
@@ -139,197 +152,337 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Update JWT token after switching organization",
 									"if (pm.response.code === 200) {",
-									"    var jsonData = pm.response.json();",
-									"    pm.environment.set(\"jwt_token\", jsonData.access_token);",
-									"    pm.environment.set(\"current_tenant_id\", jsonData.current_organization.id);",
-									"    console.log(\"Switched to:\", jsonData.current_organization.name);",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('jwt_token', response.access_token);",
+									"    if (response.current_organization) {",
+									"        pm.environment.set('current_organization_id', response.current_organization.id);",
+									"    }",
+									"    console.log('✅ Organization switched');",
 									"}"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"tenant_id\": \"techstart\"\n}"
-						},
 						"url": {
-							"raw": "{{base_url}}/switch-organization",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"switch-organization"
-							]
-						},
-						"description": "Switch to a different organization. Invalidates old token and returns new JWT with updated organization context."
-					},
-					"response": []
-				},
-				{
-					"name": "Logout",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
+							"raw": "{{base_url}}/organizations/:id/switch",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id", "switch"],
+							"variable": [
 								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
+									"key": "id",
+									"value": "{{current_organization_id}}"
 								}
 							]
 						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/logout",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"logout"
-							]
-						},
-						"description": "Logout and invalidate JWT token."
+						"description": "Switch to a different organization (gets new JWT with new context)"
 					},
 					"response": []
 				}
-			],
-			"description": "Authentication endpoints for login, register, and session management."
+			]
 		},
 		{
-			"name": "User Profile",
+			"name": "🛡️ Security",
+			"description": "Email verification, password reset, and 2FA endpoints",
+			"item": [
+				{
+					"name": "Email Verification",
+					"item": [
+						{
+							"name": "Send Verification Email",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/email/send-verification",
+									"host": ["{{base_url}}"],
+									"path": ["email", "send-verification"]
+								},
+								"description": "Send email verification link (max 3 per minute)"
+							},
+							"response": []
+						},
+						{
+							"name": "Verify Email",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\",\n  \"token\": \"64-character-verification-token\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/email/verify",
+									"host": ["{{base_url}}"],
+									"path": ["email", "verify"]
+								},
+								"description": "Verify email with token from verification email"
+							},
+							"response": []
+						},
+						{
+							"name": "Resend Verification Email",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/email/resend",
+									"host": ["{{base_url}}"],
+									"path": ["email", "resend"]
+								},
+								"description": "Resend verification email (max 3 per minute)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Password Reset",
+					"item": [
+						{
+							"name": "Request Password Reset",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/password/forgot",
+									"host": ["{{base_url}}"],
+									"path": ["password", "forgot"]
+								},
+								"description": "Request password reset link (sent via email)"
+							},
+							"response": []
+						},
+						{
+							"name": "Reset Password",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\",\n  \"token\": \"reset-token-from-email\",\n  \"password\": \"NewSecurePassword123!\",\n  \"password_confirmation\": \"NewSecurePassword123!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/password/reset",
+									"host": ["{{base_url}}"],
+									"path": ["password", "reset"]
+								},
+								"description": "Reset password with token from reset email"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Two-Factor Authentication (2FA)",
+					"item": [
+						{
+							"name": "Enable 2FA",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/2fa/enable",
+									"host": ["{{base_url}}"],
+									"path": ["2fa", "enable"]
+								},
+								"description": "Enable 2FA - returns QR code and recovery codes"
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm 2FA Setup",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"123456\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/2fa/confirm",
+									"host": ["{{base_url}}"],
+									"path": ["2fa", "confirm"]
+								},
+								"description": "Confirm 2FA setup with code from authenticator app"
+							},
+							"response": []
+						},
+						{
+							"name": "Verify 2FA Code (Login)",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\",\n  \"code\": \"123456\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/2fa/verify",
+									"host": ["{{base_url}}"],
+									"path": ["2fa", "verify"]
+								},
+								"description": "Verify 2FA code during login (or use recovery code)"
+							},
+							"response": []
+						},
+						{
+							"name": "Disable 2FA",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"password\": \"currentPassword123\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/2fa/disable",
+									"host": ["{{base_url}}"],
+									"path": ["2fa", "disable"]
+								},
+								"description": "Disable 2FA (requires password confirmation)"
+							},
+							"response": []
+						},
+						{
+							"name": "Regenerate Recovery Codes",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"password\": \"currentPassword123\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/2fa/recovery-codes",
+									"host": ["{{base_url}}"],
+									"path": ["2fa", "recovery-codes"]
+								},
+								"description": "Generate new recovery codes (invalidates old ones)"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "👤 User Profile",
+			"description": "User profile management with 20+ fields",
 			"item": [
 				{
 					"name": "Get Profile",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
-							"raw": "{{base_url}}/me",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"me"
-							]
+							"raw": "{{base_url}}/profile",
+							"host": ["{{base_url}}"],
+							"path": ["profile"]
 						},
-						"description": "Get complete user profile with all 20+ fields including preferences."
+						"description": "Get complete user profile"
 					},
 					"response": []
 				},
 				{
 					"name": "Update Profile",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "PUT",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"phone\": \"+1-555-0101\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"country\": \"USA\",\n    \"bio\": \"Updated bio - Senior Software Engineer\",\n    \"timezone\": \"America/New_York\",\n    \"language\": \"en\"\n}"
+							"raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+1-555-0100\",\n  \"date_of_birth\": \"1990-01-15\",\n  \"gender\": \"male\",\n  \"bio\": \"Software Engineer\",\n  \"company\": \"Acme Corp\",\n  \"job_title\": \"Senior Developer\",\n  \"department\": \"Engineering\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"country\": \"USA\",\n  \"postal_code\": \"10001\",\n  \"timezone\": \"America/New_York\",\n  \"language\": \"en\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/profile",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"profile"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["profile"]
 						},
-						"description": "Update user profile information. All fields are optional."
+						"description": "Update user profile with enhanced fields"
 					},
 					"response": []
 				},
 				{
 					"name": "Upload Avatar",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "formdata",
 							"formdata": [
@@ -342,983 +495,1083 @@
 						},
 						"url": {
 							"raw": "{{base_url}}/profile/avatar",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"profile",
-								"avatar"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["profile", "avatar"]
 						},
-						"description": "Upload user avatar image. Max size 2MB. Accepted formats: jpeg, png, jpg, gif."
+						"description": "Upload user avatar (max 2MB, jpg/png/gif)"
 					},
 					"response": []
 				},
 				{
 					"name": "Delete Avatar",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/profile/avatar",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"profile",
-								"avatar"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["profile", "avatar"]
 						},
-						"description": "Delete user avatar image."
+						"description": "Delete user avatar"
 					},
 					"response": []
 				},
 				{
 					"name": "Change Password",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "PUT",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"current_password\": \"password\",\n    \"new_password\": \"newpassword123\",\n    \"new_password_confirmation\": \"newpassword123\"\n}"
+							"raw": "{\n  \"current_password\": \"oldPassword123\",\n  \"password\": \"newPassword123!\",\n  \"password_confirmation\": \"newPassword123!\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/profile/password",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"profile",
-								"password"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["profile", "password"]
 						},
-						"description": "Change user password. Requires current password for security."
+						"description": "Change user password"
 					},
 					"response": []
 				},
 				{
 					"name": "Update Preferences",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "PUT",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"preferences\": {\n        \"theme\": \"dark\",\n        \"notifications\": true,\n        \"email_digest\": \"weekly\",\n        \"sidebar_collapsed\": false\n    }\n}"
+							"raw": "{\n  \"email_notifications\": true,\n  \"sms_notifications\": false,\n  \"marketing_emails\": false,\n  \"newsletter_subscription\": true\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/profile/preferences",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"profile",
-								"preferences"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["profile", "preferences"]
 						},
-						"description": "Update user preferences. Accepts any JSON object. Preferences are merged with existing ones."
+						"description": "Update notification preferences"
 					},
 					"response": []
 				}
-			],
-			"description": "User profile management endpoints."
+			]
 		},
 		{
-			"name": "Tenants (Organizations)",
+			"name": "🏢 Organizations",
+			"description": "Multi-tenancy organization management",
 			"item": [
 				{
-					"name": "List My Tenants",
+					"name": "List My Organizations",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
-							"raw": "{{base_url}}/tenants",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants"
-							]
+							"raw": "{{base_url}}/organizations",
+							"host": ["{{base_url}}"],
+							"path": ["organizations"]
 						},
-						"description": "Get list of all tenants/organizations the authenticated user belongs to."
+						"description": "Get all organizations the user belongs to"
 					},
 					"response": []
 				},
 				{
-					"name": "Create Tenant",
+					"name": "Create Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.organization) {",
+									"        pm.environment.set('current_organization_id', response.organization.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"New Company Inc\",\n    \"slug\": \"newcompany\",\n    \"domain\": \"newcompany.example.com\",\n    \"description\": \"A new company for testing\"\n}"
+							"raw": "{\n  \"name\": \"New Company\",\n  \"slug\": \"new-company\",\n  \"description\": \"A new organization\",\n  \"website\": \"https://newcompany.com\",\n  \"industry\": \"Technology\",\n  \"size\": \"10-50\",\n  \"subscription_status\": \"trial\",\n  \"max_users\": 10\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/tenants",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants"
-							]
+							"raw": "{{base_url}}/organizations",
+							"host": ["{{base_url}}"],
+							"path": ["organizations"]
 						},
-						"description": "Create a new tenant/organization. UUID is auto-generated."
+						"description": "Create a new organization (creator becomes owner)"
 					},
 					"response": []
 				},
 				{
-					"name": "Get Tenant Details",
+					"name": "Get Organization Details",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/tenants/{{current_tenant_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants",
-								"{{current_tenant_id}}"
+							"raw": "{{base_url}}/organizations/:id",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
 							]
 						},
-						"description": "Get details of a specific tenant by UUID or slug."
+						"description": "Get organization details"
 					},
 					"response": []
 				},
 				{
-					"name": "Update Tenant",
+					"name": "Update Organization",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "PUT",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							},
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Updated Company Name\",\n    \"description\": \"Updated description\",\n    \"is_active\": true\n}"
+							"raw": "{\n  \"name\": \"Updated Company Name\",\n  \"description\": \"Updated description\",\n  \"website\": \"https://updated.com\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/tenants/{{current_tenant_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants",
-								"{{current_tenant_id}}"
+							"raw": "{{base_url}}/organizations/:id",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
 							]
 						},
-						"description": "Update tenant information."
+						"description": "Update organization (requires admin role)"
 					},
 					"response": []
 				},
 				{
-					"name": "Get User Context in Tenant",
+					"name": "Get User Context",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/tenants/{{current_tenant_id}}/context",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants",
-								"{{current_tenant_id}}",
-								"context"
+							"raw": "{{base_url}}/organizations/:id/context",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id", "context"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
 							]
 						},
-						"description": "Get user's roles and permissions in a specific tenant."
+						"description": "Get user's roles, permissions, and modules in organization"
 					},
 					"response": []
 				},
 				{
-					"name": "Add User to Tenant",
+					"name": "List Organization Members",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/organizations/:id/users",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id", "users"],
+							"variable": [
 								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
+									"key": "id",
+									"value": "{{current_organization_id}}"
 								}
 							]
 						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"user_id\": 4\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/tenants/{{current_tenant_id}}/add-user",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants",
-								"{{current_tenant_id}}",
-								"add-user"
-							]
-						},
-						"description": "Add a user to the tenant/organization."
+						"description": "List all users in organization"
 					},
 					"response": []
 				},
 				{
-					"name": "Remove User from Tenant",
+					"name": "Add User to Organization",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							},
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": 4\n}"
+							"raw": "{\n  \"user_id\": 5,\n  \"role_ids\": [2, 3]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/tenants/{{current_tenant_id}}/remove-user",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"tenants",
-								"{{current_tenant_id}}",
-								"remove-user"
+							"raw": "{{base_url}}/organizations/:id/users",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id", "users"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
 							]
 						},
-						"description": "Remove a user from the tenant/organization."
+						"description": "Add existing user to organization with roles"
 					},
 					"response": []
 				}
-			],
-			"description": "Tenant/organization management endpoints."
+			]
 		},
 		{
-			"name": "Roles (Tenant-Scoped)",
+			"name": "👥 Teams",
+			"description": "Team collaboration and access control",
+			"item": [
+				{
+					"name": "List All Teams",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/teams",
+							"host": ["{{base_url}}"],
+							"path": ["teams"]
+						},
+						"description": "List all teams in current organization"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Teams",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/teams/my",
+							"host": ["{{base_url}}"],
+							"path": ["teams", "my"]
+						},
+						"description": "Get teams I'm a member of"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Team",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Product Team\",\n  \"slug\": \"product\",\n  \"description\": \"Product management and strategy\",\n  \"color\": \"#3B82F6\",\n  \"parent_team_id\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams",
+							"host": ["{{base_url}}"],
+							"path": ["teams"]
+						},
+						"description": "Create a new team (creator becomes leader)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Team Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/teams/:id",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get team details with members and sub-teams"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Team",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Team Name\",\n  \"description\": \"Updated description\",\n  \"color\": \"#6366F1\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:id",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Update team (leaders only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Team",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/teams/:id",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Delete team (soft delete, leaders only)"
+					},
+					"response": []
+				},
+				{
+					"name": "List Team Members",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/teams/:id/members",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":id", "members"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "List all team members with roles"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Team Member",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": 5,\n  \"role\": \"member\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:id/members",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":id", "members"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Add member to team (role: leader/member/viewer)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Member Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"leader\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:team_id/members/:user_id",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":team_id", "members", ":user_id"],
+							"variable": [
+								{
+									"key": "team_id",
+									"value": "1"
+								},
+								{
+									"key": "user_id",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Update team member role"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Team Member",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/teams/:team_id/members/:user_id",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":team_id", "members", ":user_id"],
+							"variable": [
+								{
+									"key": "team_id",
+									"value": "1"
+								},
+								{
+									"key": "user_id",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Remove member from team"
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Modules to Team",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"module_ids\": [1, 3, 5]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teams/:id/modules",
+							"host": ["{{base_url}}"],
+							"path": ["teams", ":id", "modules"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Assign modules to team (optional team-level restrictions)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🎭 Roles & Permissions",
+			"description": "Role-based access control (RBAC)",
 			"item": [
 				{
 					"name": "List Roles",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text",
-								"description": "Tenant context (slug or UUID)"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"url": {
 							"raw": "{{base_url}}/roles",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["roles"]
 						},
-						"description": "List all roles in the current tenant. Requires admin role."
+						"description": "List all roles in organization"
 					},
 					"response": []
 				},
 				{
 					"name": "Create Role",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							},
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Editor\",\n    \"slug\": \"editor\",\n    \"description\": \"Content editor with limited admin access\"\n}"
+							"raw": "{\n  \"name\": \"Team Lead\",\n  \"slug\": \"team-lead\",\n  \"description\": \"Team leader role\",\n  \"permissions\": [1, 2, 3]\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/roles",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["roles"]
 						},
-						"description": "Create a new role in the current tenant. Requires admin role."
+						"description": "Create a new role with permissions"
 					},
 					"response": []
 				},
 				{
 					"name": "Get Role Details",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/roles/1",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles",
-								"1"
+							"raw": "{{base_url}}/roles/:id",
+							"host": ["{{base_url}}"],
+							"path": ["roles", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
 							]
 						},
-						"description": "Get details of a specific role including its permissions."
+						"description": "Get role with permissions and users"
 					},
 					"response": []
 				},
 				{
-					"name": "Assign Role to User",
+					"name": "Update Role",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
+						"method": "PUT",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							},
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": 2\n}"
+							"raw": "{\n  \"name\": \"Updated Role Name\",\n  \"description\": \"Updated description\",\n  \"permissions\": [1, 2, 3, 4]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/roles/1/assign-user",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles",
-								"1",
-								"assign-user"
+							"raw": "{{base_url}}/roles/:id",
+							"host": ["{{base_url}}"],
+							"path": ["roles", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
 							]
 						},
-						"description": "Assign a role to a user in the current tenant. Requires admin role."
+						"description": "Update role and permissions"
 					},
 					"response": []
 				},
 				{
-					"name": "Remove Role from User",
+					"name": "Delete Role",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles/:id",
+							"host": ["{{base_url}}"],
+							"path": ["roles", ":id"],
+							"variable": [
 								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
+									"key": "id",
+									"value": "1"
 								}
 							]
 						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"user_id\": 2\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/roles/1/remove-user",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles",
-								"1",
-								"remove-user"
-							]
-						},
-						"description": "Remove a role from a user in the current tenant."
+						"description": "Delete role"
 					},
 					"response": []
 				},
-				{
-					"name": "Assign Permission to Role",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"permission_id\": 3\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/roles/1/assign-permission",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles",
-								"1",
-								"assign-permission"
-							]
-						},
-						"description": "Assign a permission to a role."
-					},
-					"response": []
-				}
-			],
-			"description": "Role management endpoints (tenant-scoped, admin only)."
-		},
-		{
-			"name": "Permissions (Tenant-Scoped)",
-			"item": [
 				{
 					"name": "List Permissions",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"url": {
 							"raw": "{{base_url}}/permissions",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"permissions"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["permissions"]
 						},
-						"description": "List all permissions in the current tenant. Requires admin role."
+						"description": "List all available permissions"
 					},
 					"response": []
 				},
 				{
 					"name": "Create Permission",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							},
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Export Data\",\n    \"slug\": \"export-data\",\n    \"description\": \"Can export data to CSV/Excel format\"\n}"
+							"raw": "{\n  \"name\": \"Delete Reports\",\n  \"slug\": \"reports.delete\",\n  \"description\": \"Can delete reports\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/permissions",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"permissions"
-							]
+							"host": ["{{base_url}}"],
+							"path": ["permissions"]
 						},
-						"description": "Create a new permission in the current tenant. Requires admin role."
+						"description": "Create a new permission"
 					},
 					"response": []
 				},
 				{
-					"name": "Get Permission Details",
+					"name": "Assign Role to User",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/permissions/1",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"permissions",
-								"1"
-							]
-						},
-						"description": "Get details of a specific permission."
-					},
-					"response": []
-				},
-				{
-					"name": "Assign Permission to User",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
+								"value": "application/json"
 							},
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": 2\n}"
+							"raw": "{\n  \"user_id\": 5,\n  \"role_id\": 2\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/permissions/1/assign-user",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"permissions",
-								"1",
-								"assign-user"
-							]
+							"raw": "{{base_url}}/roles/assign",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "assign"]
 						},
-						"description": "Directly assign a permission to a user in the current tenant."
+						"description": "Assign role to user in organization"
 					},
 					"response": []
 				}
-			],
-			"description": "Permission management endpoints (tenant-scoped, admin only)."
+			]
 		},
 		{
-			"name": "Users (Tenant-Scoped)",
+			"name": "📦 Modules",
+			"description": "Module management and access control",
 			"item": [
 				{
-					"name": "List Users in Tenant",
+					"name": "List All Modules",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
-							"raw": "{{base_url}}/users",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users"
-							]
+							"raw": "{{base_url}}/modules",
+							"host": ["{{base_url}}"],
+							"path": ["modules"]
 						},
-						"description": "List all users in the current tenant. Requires admin role."
+						"description": "List all available modules (68+ modules)"
 					},
 					"response": []
 				},
 				{
-					"name": "Get User Details in Tenant",
+					"name": "List Organization Modules",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "X-Tenant-ID",
-								"value": "acme",
-								"type": "text"
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/users/1",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"1"
+							"raw": "{{base_url}}/organizations/:id/modules",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id", "modules"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
 							]
 						},
-						"description": "Get user details including their roles and permissions in the current tenant."
+						"description": "List modules enabled for organization"
+					},
+					"response": []
+				},
+				{
+					"name": "Enable Module",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"module_id\": 5,\n  \"expires_at\": \"2026-12-31\",\n  \"settings\": {\n    \"max_records\": 10000\n  },\n  \"limits\": {\n    \"api_calls\": 1000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/organizations/:id/modules",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":id", "modules"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
+							]
+						},
+						"description": "Enable a module for organization"
+					},
+					"response": []
+				},
+				{
+					"name": "Disable Module",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/organizations/:org_id/modules/:module_id",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":org_id", "modules", ":module_id"],
+							"variable": [
+								{
+									"key": "org_id",
+									"value": "{{current_organization_id}}"
+								},
+								{
+									"key": "module_id",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Disable a module for organization"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Module Settings",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"settings\": {\n    \"max_records\": 20000,\n    \"feature_enabled\": true\n  },\n  \"limits\": {\n    \"api_calls\": 2000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/organizations/:org_id/modules/:module_id",
+							"host": ["{{base_url}}"],
+							"path": ["organizations", ":org_id", "modules", ":module_id"],
+							"variable": [
+								{
+									"key": "org_id",
+									"value": "{{current_organization_id}}"
+								},
+								{
+									"key": "module_id",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Update module settings and limits"
 					},
 					"response": []
 				}
-			],
-			"description": "User management endpoints within tenant context (admin only)."
+			]
+		},
+		{
+			"name": "💳 Billing",
+			"description": "Subscription and usage tracking",
+			"item": [
+				{
+					"name": "Get Usage Data",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/billing/organizations/:id/usage",
+							"host": ["{{base_url}}"],
+							"path": ["billing", "organizations", ":id", "usage"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
+							]
+						},
+						"description": "Get current user count and module usage for billing"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Subscription Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscription_status\": \"active\",\n  \"subscription_id\": \"sub_1234567890\",\n  \"plan_id\": \"plan_premium\",\n  \"max_users\": 50,\n  \"trial_ends_at\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/billing/organizations/:id/subscription",
+							"host": ["{{base_url}}"],
+							"path": ["billing", "organizations", ":id", "subscription"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
+							]
+						},
+						"description": "Update organization subscription (billing service only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Limit",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"max_users\": 100\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/billing/organizations/:id/limit",
+							"host": ["{{base_url}}"],
+							"path": ["billing", "organizations", ":id", "limit"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
+							]
+						},
+						"description": "Update max user limit for organization"
+					},
+					"response": []
+				},
+				{
+					"name": "Suspend Organization",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/billing/organizations/:id/suspend",
+							"host": ["{{base_url}}"],
+							"path": ["billing", "organizations", ":id", "suspend"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
+							]
+						},
+						"description": "Suspend organization (blocks access immediately)"
+					},
+					"response": []
+				},
+				{
+					"name": "Reactivate Organization",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Organization-ID",
+								"value": "{{current_organization_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/billing/organizations/:id/reactivate",
+							"host": ["{{base_url}}"],
+							"path": ["billing", "organizations", ":id", "reactivate"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{current_organization_id}}"
+								}
+							]
+						},
+						"description": "Reactivate suspended organization"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -1353,7 +1606,17 @@
 			"type": "string"
 		},
 		{
-			"key": "current_tenant_id",
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "current_organization_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "organization_slug",
 			"value": "",
 			"type": "string"
 		}

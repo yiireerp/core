@@ -1,48 +1,39 @@
-# Yiire Auth - Multi-Tenant Authorization Microservice# Multi-Tenant Authorization Microservice# Yiire - Laravel Sanctum Auth with Roles & Permissions
-
-
+# Yiire Core - Multi-Organization ERP Core Microservice
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
 [![Laravel](https://img.shields.io/badge/Laravel-12.x-red.svg)](https://laravel.com)
-
-[![PHP](https://img.shields.io/badge/PHP-8.2+-purple.svg)](https://php.net)A production-ready Laravel-based multi-tenant authorization microservice with JWT authentication, role-based access control (RBAC), and comprehensive user management.A complete Laravel application with Laravel Sanctum authentication and a comprehensive Role-Based Access Control (RBAC) system.
-
+[![PHP](https://img.shields.io/badge/PHP-8.2+-purple.svg)](https://php.net)
 [![Docker](https://img.shields.io/badge/Docker-Supported-blue.svg)](https://docker.com)
 
-
-
-A production-ready Laravel-based multi-tenant authorization microservice with JWT authentication, role-based access control (RBAC), and comprehensive user management.
-
-## Features## Features
+A production-ready Laravel-based multi-organization ERP core microservice with JWT authentication, role-based access control (RBAC), modular architecture, and comprehensive user management.
 
 ## ✨ Features
 
-
-
+### Core Features
 - 🏢 **Multi-Tenancy** - Users can belong to multiple organizations with different roles
-
-- 🔐 **JWT Authentication** - Secure token-based authentication with embedded permissions✅ **Multi-Tenancy** - Users can belong to multiple organizations with different roles  ✅ **Laravel Sanctum Authentication**
-
-- 👥 **RBAC System** - Flexible role and permission management scoped per tenant
-
-- 🔑 **UUID Tenant IDs** - Secure, non-enumerable tenant identifiers✅ **JWT Authentication** - Secure token-based authentication with embedded permissions  - User registration with email/password
-
+- 🔐 **JWT Authentication** - Secure token-based authentication with embedded permissions
+- 👥 **RBAC System** - Flexible role and permission management scoped per organization
+- 🔑 **UUID Organization IDs** - Secure, non-enumerable organization identifiers
+- 📦 **Module Management** - Modular ERP architecture with 68+ Odoo-style modules
+- 🎯 **Selective Module Access** - Organizations can enable/disable specific modules
+- ⚙️ **Module Configuration** - Per-organization settings, limits, and licensing
 - 👤 **Enhanced User Profiles** - 20+ profile fields with avatar upload support
-
-- 🗑️ **Soft Deletes** - Safe data retention✅ **RBAC System** - Flexible role and permission management scoped per tenant  - Token-based authentication
-
+- 🗑️ **Soft Deletes** - Safe data retention
 - 🚀 **API-First Design** - RESTful API with complete documentation
-
-- 🐳 **Docker Support** - Ready-to-deploy containers✅ **UUID Tenant IDs** - Secure, non-enumerable tenant identifiers  - Secure login/logout
-
+- 🐳 **Docker Support** - Ready-to-deploy containers
 - 📊 **Comprehensive Seeding** - Demo data for quick development
 
-✅ **Enhanced User Profiles** - Comprehensive user data with preferences  - Token revocation
+### Security Features
+- 📧 **Email Verification** - Automated email verification for new registrations
+- 🔒 **Password Reset** - Secure forgot password flow with email tokens
+- 🔐 **Two-Factor Authentication (2FA)** - TOTP-based 2FA with QR codes and recovery codes
+- 🚦 **Rate Limiting** - Intelligent rate limiting on authentication endpoints
+- 🛡️ **Security Best Practices** - Password hashing, token expiration, CORS support
 
-## 📋 Table of Contents
-
-✅ **Soft Deletes** - Safe data retention  
+### Quality & Testing
+- ✅ **Comprehensive Test Suite** - Unit and feature tests for all critical functionality
+- 🧪 **Test Coverage** - Authentication, RBAC, organizations, email, 2FA, password reset
+- 🏭 **Model Factories** - Easy test data generation
 
 - [Quick Start](#-quick-start)
 
@@ -98,7 +89,7 @@ php artisan jwt:secret
 
 # Run migrations and seed demo data
 
-php artisan migrate:fresh --seed --seeder=MultiTenantSeeder# Generate application key✅ **Security**
+php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder# Generate application key✅ **Security**
 
 
 
@@ -126,7 +117,7 @@ git clone https://github.com/yiire-erp/auth.git# Run migrations and seed demo da
 
 cd auth
 
-php artisan migrate:fresh --seed --seeder=MultiTenantSeeder
+php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder
 
 # Copy environment file
 
@@ -142,7 +133,7 @@ php artisan servecomposer install
 
 # Run migrations inside container
 
-docker-compose exec app php artisan migrate:fresh --seed --seeder=MultiTenantSeeder``````
+docker-compose exec app php artisan migrate:fresh --seed --seeder=MultiOrganizationSeeder``````
 
 
 
@@ -242,7 +233,7 @@ Password: passwordDB_CONNECTION=mysql
 
    php artisan migrate
 
-   ```- **[Authentication Guide](./docs/AUTHENTICATION.md)** - JWT auth and multi-tenant login```bash
+   ```- **[Authentication Guide](./docs/AUTHENTICATION.md)** - JWT auth and multi-organization login```bash
 
 
 
@@ -250,11 +241,11 @@ Password: passwordDB_CONNECTION=mysql
 
    ```bash
 
-   php artisan db:seed --class=MultiTenantSeeder- **[User Management](./docs/USER_MANAGEMENT.md)** - Profile management features```
+   php artisan db:seed --class=MultiOrganizationSeeder- **[User Management](./docs/USER_MANAGEMENT.md)** - Profile management features```
 
    ```
 
-- **[Multi-Tenancy Guide](./docs/MULTI_TENANCY.md)** - Tenant and RBAC management
+- **[Multi-Organization Guide](./docs/MULTI_ORGANIZATION.md)** - Organization and RBAC management
 
 6. **Install Frontend Dependencies (Optional)**
 
@@ -298,7 +289,7 @@ docker-compose up -d    "password": "password",
 
 ```
 
-    "tenant_id": "acme"### Public Endpoints
+    "organization_id": "acme"### Public Endpoints
 
 **View logs:**
 
@@ -390,7 +381,7 @@ docker-compose --profile scheduler up -d## Architecture
 
 For production, use the optimized Dockerfile:
 
-Users ──┬── Tenant A (Admin) ──┬── Roles ──┬── Permissions📖 **[AUTH_API_DOCUMENTATION.md](AUTH_API_DOCUMENTATION.md)** - API documentation
+Users ──┬── Organization A (Admin) ──┬── Roles ──┬── Permissions📖 **[AUTH_API_DOCUMENTATION.md](AUTH_API_DOCUMENTATION.md)** - API documentation
 
 ```bash
 
@@ -406,7 +397,7 @@ docker run -d \        │
 
   --name yiire-auth \
 
-  -p 80:80 \        └── Tenant B (User) ───┬── Roles ──┬── Permissions### Check User Roles
+  -p 80:80 \        └── Organization B (User) ───┬── Roles ──┬── Permissions### Check User Roles
 
   -e APP_ENV=production \
 
@@ -462,7 +453,7 @@ docker run -d \        │
 
 | PUT | `/api/profile` | Update profile information |
 
-| POST | `/api/profile/avatar` | Upload avatar image |### Multi-Tenant Support### Protect Routes
+| POST | `/api/profile/avatar` | Upload avatar image |### Multi-Organization Support### Protect Routes
 
 | DELETE | `/api/profile/avatar` | Delete avatar |
 
@@ -472,25 +463,25 @@ docker run -d \        │
 
 - Different roles per organizationRoute::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
-### Tenant Management
+### Organization Management
 
-- Isolated data per tenant    // Admin only routes
+- Isolated data per organization    // Admin only routes
 
 | Method | Endpoint | Description |
 
 |--------|----------|-------------|});
 
-| GET | `/api/tenants` | List user's organizations |
+| GET | `/api/organizations` | List user's organizations |
 
-| POST | `/api/tenants` | Create new tenant |### Security```
+| POST | `/api/organizations` | Create new organization |### Security```
 
-| GET | `/api/tenants/{id}` | Get tenant details |
+| GET | `/api/organizations/{id}` | Get organization details |
 
-| PUT | `/api/tenants/{id}` | Update tenant |- JWT tokens with embedded permissions
+| PUT | `/api/organizations/{id}` | Update organization |- JWT tokens with embedded permissions
 
-| POST | `/api/tenants/{id}/add-user` | Add user to tenant |
+| POST | `/api/organizations/{id}/add-user` | Add user to organization |
 
-| POST | `/api/tenants/{id}/remove-user` | Remove user from tenant |- UUID-based tenant IDs (non-enumerable)### API Testing
+| POST | `/api/organizations/{id}/remove-user` | Remove user from organization |- UUID-based organization IDs (non-enumerable)### API Testing
 
 
 
@@ -498,7 +489,7 @@ docker run -d \        │
 
 
 
-All role and permission endpoints require admin privileges and tenant context via `X-Tenant-ID` header.- Soft deletes for data retention# Register
+All role and permission endpoints require admin privileges and organization context via `X-Organization-ID` header.- Soft deletes for data retention# Register
 
 
 
@@ -514,13 +505,13 @@ All role and permission endpoints require admin privileges and tenant context vi
 
 
 
-### Multi-Tenant Model- 20+ profile fields
+### Multi-Organization Model- 20+ profile fields
 
 
 
 ```- Avatar upload support# Login
 
-Users ──┬── Tenant A (Admin) ──┬── Roles ──┬── Permissions
+Users ──┬── Organization A (Admin) ──┬── Roles ──┬── Permissions
 
         │                      │           └── manage-users- Timezone and language preferencescurl -X POST http://localhost:8000/api/login \
 
@@ -528,7 +519,7 @@ Users ──┬── Tenant A (Admin) ──┬── Roles ──┬── Per
 
         │- Custom JSON preferences  -H "Content-Type: application/json" \
 
-        └── Tenant B (User) ───┬── Roles ──┬── Permissions
+        └── Organization B (User) ───┬── Roles ──┬── Permissions
 
                                │           └── view-posts- Password change functionality  -d '{"email": "john@test.com", "password": "password123"}'
 
@@ -544,15 +535,15 @@ Users ──┬── Tenant A (Admin) ──┬── Roles ──┬── Per
 
 - **users** - User accounts with 20+ profile fields## Default Roles
 
-- **tenants** - Organizations with UUID primary keys
+- **organizations** - Organizations with UUID primary keys
 
-- **roles** - Tenant-scoped rolesMIT License
+- **roles** - Organization-scoped rolesMIT License
 
-- **permissions** - Tenant-scoped permissions
+- **permissions** - Organization-scoped permissions
 
-- **tenant_user** - User-tenant relationships- **Admin** - Full system access (all permissions)
+- **organization_user** - User-organization relationships- **Admin** - Full system access (all permissions)
 
-- **role_user** - User-role assignments (per tenant)
+- **role_user** - User-role assignments (per organization)
 
 - **permission_role** - Role-permission assignments---- **Moderator** - Content moderation access
 
@@ -570,7 +561,7 @@ Users ──┬── Tenant A (Admin) ──┬── Roles ──┬── Per
 
   "sub": 1,
 
-  "tenant_id": "019a77f4-54f3-72c3-beec-c8b1a59dbc23",**Laravel:** 12.x | **PHP:** 8.2+
+  "organization_id": "019a77f4-54f3-72c3-beec-c8b1a59dbc23",**Laravel:** 12.x | **PHP:** 8.2+
 
   "roles": ["admin"],
 
@@ -592,7 +583,7 @@ After seeding the database, you can use these credentials:
 
 - Laravel 12.x
 
-| Email | Password | Tenants | Role |- Laravel Sanctum 4.x
+| Email | Password | Organizations | Role |- Laravel Sanctum 4.x
 
 |-------|----------|---------|------|- PHP 8.2+
 
@@ -619,17 +610,17 @@ curl -X POST http://localhost:8000/api/login \---
     "email": "john@example.com",
 
     "password": "password",
-    "tenant_id": "acme"
+    "organization_id": "acme"
   }'
 ```
 
 ## 📖 Documentation
 
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Installation and setup
-- **[Authentication Guide](docs/AUTHENTICATION.md)** - JWT auth and multi-tenant login
+- **[Authentication Guide](docs/AUTHENTICATION.md)** - JWT auth and multi-organization login
 - **[API Reference](docs/API_REFERENCE.md)** - Complete endpoint documentation
 - **[User Management](docs/USER_MANAGEMENT.md)** - Profile management features
-- **[Multi-Tenancy Guide](docs/MULTI_TENANCY.md)** - Tenant and RBAC management
+- **[Multi-Organization Guide](docs/MULTI_ORGANIZATION.md)** - Organization and RBAC management
 - **[Postman Collection](postman_collection.json)** - Ready-to-use API requests
 
 ## 🛠️ Technology Stack
@@ -679,7 +670,7 @@ This project is open-sourced software licensed under the [MIT license](LICENSE).
 
 - Built with [Laravel](https://laravel.com)
 - JWT authentication by [tymon/jwt-auth](https://github.com/tymondesigns/jwt-auth)
-- Inspired by modern multi-tenant SaaS architectures
+- Inspired by modern multi-organization SaaS architectures
 
 ## 📧 Support
 

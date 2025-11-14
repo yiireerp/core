@@ -1,16 +1,34 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmailVerificationController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\RoleModuleController;
+use App\Http\Controllers\Api\OrganizationController;
+use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ModuleController;
+use App\Http\Controllers\OrganizationUsageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle.auth');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle.auth');
+Route::post('/refresh', [AuthController::class, 'refresh']); // Refresh doesn't need auth
+
+// Email verification routes
+Route::post('/email/verify', [EmailVerificationController::class, 'verify'])->middleware('throttle:10,1');
+Route::post('/email/resend', [EmailVerificationController::class, 'resend'])->middleware('throttle:3,1');
+
+// Password reset routes
+Route::post('/password/forgot', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:3,1');
+Route::post('/password/reset', [PasswordResetController::class, 'reset'])->middleware('throttle:5,1');
+
+// Two-factor authentication verification (public - for login flow)
+Route::post('/2fa/verify', [TwoFactorController::class, 'verify'])->middleware('throttle:5,1');
 
 // Protected routes - using JWT authentication
 Route::middleware(['auth:api'])->group(function () {
@@ -26,23 +44,96 @@ Route::middleware(['auth:api'])->group(function () {
     Route::put('/profile/password', [UserController::class, 'changePassword']);
     Route::put('/profile/preferences', [UserController::class, 'updatePreferences']);
 
+    // Email verification (authenticated)
+    Route::post('/email/send-verification', [EmailVerificationController::class, 'send']);
+
+    // Two-factor authentication routes
+    Route::prefix('2fa')->group(function () {
+        Route::post('/enable', [TwoFactorController::class, 'enable']);
+        Route::post('/confirm', [TwoFactorController::class, 'confirm']);
+        Route::post('/disable', [TwoFactorController::class, 'disable']);
+        Route::post('/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes']);
+    });
+
     // Tenant management routes
-    Route::prefix('tenants')->group(function () {
-        Route::get('/', [TenantController::class, 'index']);
-        Route::post('/', [TenantController::class, 'store']);
-        Route::get('/current', [TenantController::class, 'current']);
-        Route::get('/{id}', [TenantController::class, 'show']);
-        Route::put('/{id}', [TenantController::class, 'update']);
-        Route::delete('/{id}', [TenantController::class, 'destroy']);
+    Route::prefix('organizations')->group(function () {
+        Route::get('/', [OrganizationController::class, 'index']);
+        Route::post('/', [OrganizationController::class, 'store']);
+        Route::get('/current', [OrganizationController::class, 'current']);
+        Route::get('/{id}', [OrganizationController::class, 'show']);
+        Route::put('/{id}', [OrganizationController::class, 'update']);
+        Route::delete('/{id}', [OrganizationController::class, 'destroy']);
         
         // Tenant user management
-        Route::post('/{id}/add-user', [TenantController::class, 'addUser']);
-        Route::post('/{id}/remove-user', [TenantController::class, 'removeUser']);
-        Route::get('/{id}/context', [TenantController::class, 'userContext']);
+        Route::post('/{id}/add-user', [OrganizationController::class, 'addUser']);
+        Route::post('/{id}/remove-user', [OrganizationController::class, 'removeUser']);
+        Route::get('/{id}/context', [OrganizationController::class, 'userContext']);
+        
+        // Organization module management
+        Route::get('/{id}/modules', [ModuleController::class, 'getOrganizationModules']);
+        Route::post('/{id}/modules/{moduleId}/enable', [ModuleController::class, 'enableForOrganization']);
+        Route::post('/{id}/modules/{moduleId}/disable', [ModuleController::class, 'disableForOrganization']);
+    });
+
+    // Billing integration routes - for billing service to query usage and update subscriptions
+    Route::prefix('billing')->group(function () {
+        // Usage and subscription data endpoints
+        Route::get('/organizations/{organizationId}/usage', [OrganizationUsageController::class, 'getUsage']);
+        Route::get('/organizations/{organizationId}/users/count', [OrganizationUsageController::class, 'getUsersCount']);
+        Route::get('/organizations/{organizationId}/modules', [OrganizationUsageController::class, 'getModules']);
+        Route::get('/organizations/{organizationId}/subscription', [OrganizationUsageController::class, 'getSubscriptionStatus']);
+        
+        // Update subscription from billing service
+        Route::patch('/organizations/{organizationId}/subscription', [OrganizationUsageController::class, 'updateSubscription']);
+        
+        // Check limits
+        Route::post('/organizations/{organizationId}/check-user-limit', [OrganizationUsageController::class, 'checkUserLimit']);
+        
+        // Bulk operations for efficiency
+        Route::post('/organizations/bulk-usage', [OrganizationUsageController::class, 'getBulkUsage']);
+    });
+
+
+    // Module management routes (global admin only)
+    Route::middleware(['role:globaladmin'])->prefix('modules')->group(function () {
+        Route::get('/', [ModuleController::class, 'index']);
+        Route::post('/', [ModuleController::class, 'store']);
+        Route::get('/{id}', [ModuleController::class, 'show']);
+        Route::put('/{id}', [ModuleController::class, 'update']);
+        Route::delete('/{id}', [ModuleController::class, 'destroy']);
+    });
+
+    // Team management routes (organization-scoped)
+    Route::prefix('teams')->group(function () {
+        // List all teams in organization
+        Route::get('/', [App\Http\Controllers\Api\TeamController::class, 'index']);
+        
+        // Get user's teams
+        Route::get('/my-teams', [App\Http\Controllers\Api\TeamController::class, 'myTeams']);
+        
+        // Create team
+        Route::post('/', [App\Http\Controllers\Api\TeamController::class, 'store']);
+        
+        // Get single team
+        Route::get('/{id}', [App\Http\Controllers\Api\TeamController::class, 'show']);
+        
+        // Update team
+        Route::put('/{id}', [App\Http\Controllers\Api\TeamController::class, 'update']);
+        
+        // Delete team
+        Route::delete('/{id}', [App\Http\Controllers\Api\TeamController::class, 'destroy']);
+        
+        // Team member management
+        Route::post('/{id}/members', [App\Http\Controllers\Api\TeamController::class, 'addMember']);
+        Route::delete('/{id}/members', [App\Http\Controllers\Api\TeamController::class, 'removeMember']);
+        Route::patch('/{id}/members/role', [App\Http\Controllers\Api\TeamController::class, 'updateMemberRole']);
+        
+        // Assign modules to team
+        Route::post('/{id}/modules', [App\Http\Controllers\Api\TeamController::class, 'assignModules']);
     });
 
     // Tenant-scoped routes (require tenant context)
-    Route::middleware(['tenant'])->group(function () {
+    Route::middleware(['organization'])->group(function () {
         // User management routes (admin only in tenant)
         Route::middleware(['role:admin'])->group(function () {
             Route::get('/users', [UserController::class, 'index']);
@@ -64,7 +155,16 @@ Route::middleware(['auth:api'])->group(function () {
             // Assign/remove permissions to roles
             Route::post('/{id}/assign-permission', [RoleController::class, 'assignPermission']);
             Route::post('/{id}/remove-permission', [RoleController::class, 'removePermission']);
+            
+            // Role-Module management (hybrid access control)
+            Route::get('/{id}/modules', [RoleModuleController::class, 'index']);
+            Route::post('/{id}/modules', [RoleModuleController::class, 'assignModules']);
+            Route::post('/{id}/modules/{moduleId}', [RoleModuleController::class, 'addModule']);
+            Route::delete('/{id}/modules/{moduleId}', [RoleModuleController::class, 'removeModule']);
         });
+
+        // Available modules for organization
+        Route::get('/organizations/{organizationId}/available-modules', [RoleModuleController::class, 'availableModules']);
 
         // Permission management routes (admin only in tenant)
         Route::middleware(['role:admin'])->prefix('permissions')->group(function () {

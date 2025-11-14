@@ -14,12 +14,24 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\SetTimezone::class,
+            \App\Http\Middleware\SetLocale::class,
         ]);
         
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
-            'tenant' => \App\Http\Middleware\SetTenantContext::class,
+            'organization' => \App\Http\Middleware\SetOrganizationContext::class,
+            'check.limits' => \App\Http\Middleware\CheckOrganizationLimits::class,
+            'module.access' => \App\Http\Middleware\CheckModuleAccess::class,
+            'module.jwt' => \App\Http\Middleware\CheckModuleAccessFromJWT::class,
+            'team.access' => \App\Http\Middleware\CheckTeamAccess::class,
+            'subscription.active' => \App\Http\Middleware\CheckSubscriptionStatus::class,
+            'user.limit' => \App\Http\Middleware\CheckUserLimit::class,
+            'owner.only' => \App\Http\Middleware\CheckOwnerAccess::class,
+            'throttle.auth' => \App\Http\Middleware\ThrottleAuthAttempts::class,
+            'locale' => \App\Http\Middleware\SetLocale::class,
+            'timezone' => \App\Http\Middleware\SetTimezone::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -1,14 +1,16 @@
-# Role and Permission System Documentation
+# Multi-Organization System Documentation
 
 ## Overview
 
-The Yiire Laravel application now includes a comprehensive Role-Based Access Control (RBAC) system with the following features:
+The Yiire Laravel application includes a comprehensive Multi-Organization RBAC (Role-Based Access Control) system with the following features:
 
-- **Roles**: Group permissions together (Admin, Moderator, User)
-- **Permissions**: Define specific actions users can perform
+- **Organizations**: Multi-organization support with isolated data
+- **Roles**: Group permissions together (Admin, Moderator, User) - scoped per organization
+- **Permissions**: Define specific actions users can perform - scoped per organization
+- **Global Roles & Permissions**: System-wide roles/permissions available across all organizations
 - **Direct Permissions**: Assign permissions directly to users
 - **Role-based Permissions**: Users inherit permissions from their roles
-- **Middleware**: Protect routes based on roles and permissions
+- **Middleware**: Protect routes based on roles and permissions within organization context
 
 ## Database Structure
 

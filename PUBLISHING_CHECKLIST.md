@@ -24,7 +24,7 @@ git branch -M main
 - [ ] Go to https://github.com/new
 - [ ] Repository name: `auth`
 - [ ] Organization/User: `yiire`
-- [ ] Description: "Multi-tenant authorization microservice with JWT authentication, RBAC, and comprehensive user management built on Laravel"
+- [ ] Description: "Multi-organization authorization microservice with JWT authentication, RBAC, and comprehensive user management built on Laravel"
 - [ ] Public repository
 - [ ] Do NOT initialize with README (we already have one)
 
@@ -48,7 +48,7 @@ git push origin v1.0.0
 ### 5. Repository Settings
 - [ ] Add repository description
 - [ ] Add website URL: https://github.com/yiire-erp/auth
-- [ ] Add topics: `laravel`, `authentication`, `jwt`, `multi-tenant`, `rbac`, `authorization`, `microservice`, `api`, `sanctum`, `php`
+- [ ] Add topics: `laravel`, `authentication`, `jwt`, `multi-organization`, `rbac`, `authorization`, `microservice`, `api`, `sanctum`, `php`
 - [ ] Enable Issues
 - [ ] Enable Discussions (optional)
 - [ ] Enable Wiki (optional)

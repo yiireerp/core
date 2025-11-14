@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Middleware;
 
 use Closure;
@@ -16,28 +15,26 @@ class PermissionMiddleware
      */
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return response()->json([
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
             ], 401);
         }
 
-        $tenant = $request->attributes->get('tenant') ?? app('tenant', null);
+        $organization = $request->attributes->get('organization') ?? app('organization');
 
-        if (!$tenant) {
+        if (!$organization) {
             return response()->json([
-                'message' => 'Tenant context is required.'
+                'message' => 'Tenant context is required.',
             ], 400);
         }
 
-        if (!$request->user()->hasAnyPermissionInTenant($permissions, $tenant)) {
+        if (!$request->user()->hasAnyPermissionInTenant($permissions, $organization)) {
             return response()->json([
-                'message' => 'Unauthorized. Required permission(s) in this tenant: ' . implode(', ', $permissions)
+                'message' => 'Unauthorized. Required permission(s) in this tenant: ' . implode(', ', $permissions),
             ], 403);
         }
 
         return $next($request);
     }
 }
-
-

@@ -2,25 +2,27 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permission extends Model
 {
+    use HasFactory;
     protected $fillable = [
-        'tenant_id',
+        'organization_id',
         'name',
         'slug',
         'description',
     ];
 
     /**
-     * The tenant that owns the permission.
+     * The organization that owns the permission.
      */
-    public function tenant(): BelongsTo
+    public function organization(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Organization::class);
     }
 
     /**
@@ -39,4 +41,3 @@ class Permission extends Model
         return $this->belongsToMany(User::class);
     }
 }
-

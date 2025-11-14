@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PermissionResource;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -12,10 +13,10 @@ class PermissionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $permissions = Permission::all();
-        return response()->json($permissions);
+        $permissions = Permission::paginate($request->get('per_page', 15));
+        return PermissionResource::collection($permissions);
     }
 
     /**
@@ -25,13 +26,32 @@ class PermissionController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:permissions',
+            'slug' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'organization_id' => 'nullable|string|max:50', // Can be UUID, 'global', or null
         ]);
+
+        // Check if permission already exists with this slug and organization_id
+        $existingPermission = Permission::where('slug', $request->slug)
+            ->where('organization_id', $request->organization_id)
+            ->first();
+
+        if ($existingPermission) {
+            return response()->json([
+                'error' => 'A permission with this slug already exists for this tenant'
+            ], 422);
+        }
+
+        // Only global admins can create global permissions (organization_id = null or 'global')
+        if ((is_null($request->organization_id) || $request->organization_id === 'global') && !$request->user()->canManageGlobalRoles()) {
+            return response()->json([
+                'error' => 'Only global admins can create global permissions'
+            ], 403);
+        }
 
         $permission = Permission::create($request->all());
 
-        return response()->json($permission, 201);
+        return new PermissionResource($permission);
     }
 
     /**
@@ -39,8 +59,8 @@ class PermissionController extends Controller
      */
     public function show(string $id)
     {
-        $permission = Permission::with('roles', 'users')->findOrFail($id);
-        return response()->json($permission);
+        $permission = Permission::findOrFail($id);
+        return new PermissionResource($permission);
     }
 
     /**
@@ -52,13 +72,35 @@ class PermissionController extends Controller
 
         $request->validate([
             'name' => 'sometimes|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:permissions,slug,' . $id,
+            'slug' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
+            'organization_id' => 'nullable|string|max:50',
         ]);
+
+        // Check for duplicate slug
+        if ($request->has('slug')) {
+            $existingPermission = Permission::where('slug', $request->slug)
+                ->where('organization_id', $request->organization_id ?? $permission->organization_id)
+                ->where('id', '!=', $id)
+                ->first();
+
+            if ($existingPermission) {
+                return response()->json([
+                    'error' => 'A permission with this slug already exists for this tenant'
+                ], 422);
+            }
+        }
+
+        // Only global admins can update to global permissions (organization_id = null or 'global')
+        if ($request->has('organization_id') && (is_null($request->organization_id) || $request->organization_id === 'global') && !$request->user()->canManageGlobalRoles()) {
+            return response()->json([
+                'error' => 'Only global admins can create or update global permissions'
+            ], 403);
+        }
 
         $permission->update($request->all());
 
-        return response()->json($permission);
+        return new PermissionResource($permission);
     }
 
     /**

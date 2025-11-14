@@ -2,25 +2,27 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Role extends Model
 {
+    use HasFactory;
     protected $fillable = [
-        'tenant_id',
+        'organization_id',
         'name',
         'slug',
         'description',
     ];
 
     /**
-     * The tenant that owns the role.
+     * The organization that owns the role.
      */
-    public function tenant(): BelongsTo
+    public function organization(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Organization::class);
     }
 
     /**
@@ -29,7 +31,7 @@ class Role extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot('tenant_id')
+            ->withPivot('organization_id')
             ->withTimestamps();
     }
 
@@ -48,7 +50,7 @@ class Role extends Model
     {
         if (is_string($permission)) {
             $permission = Permission::where('slug', $permission)
-                ->where('tenant_id', $this->tenant_id)
+                ->where('organization_id', $this->organization_id)
                 ->firstOrFail();
         }
 
@@ -64,7 +66,7 @@ class Role extends Model
     {
         if (is_string($permission)) {
             $permission = Permission::where('slug', $permission)
-                ->where('tenant_id', $this->tenant_id)
+                ->where('organization_id', $this->organization_id)
                 ->firstOrFail();
         }
 
@@ -84,5 +86,114 @@ class Role extends Model
 
         return $this->permissions()->where('id', $permission->id)->exists();
     }
-}
 
+    // ===================================
+    // Module Access Methods
+    // ===================================
+
+    /**
+     * The modules that belong to the role.
+     */
+    public function modules(): BelongsToMany
+    {
+        return $this->belongsToMany(Module::class, 'role_module')
+            ->withPivot('organization_id', 'has_access', 'granted_by')
+            ->withTimestamps();
+    }
+
+    /**
+     * Assign module access to role.
+     *
+     * @param Module|int $module
+     * @param int|null $grantedBy User ID who granted access
+     * @return self
+     */
+    public function giveModuleAccess(Module|int $module, ?int $grantedBy = null): self
+    {
+        $moduleId = $module instanceof Module ? $module->id : $module;
+
+        $this->modules()->syncWithoutDetaching([
+            $moduleId => [
+                'organization_id' => $this->organization_id,
+                'has_access' => true,
+                'granted_by' => $grantedBy,
+            ]
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Revoke module access from role.
+     *
+     * @param Module|int $module
+     * @return self
+     */
+    public function revokeModuleAccess(Module|int $module): self
+    {
+        $moduleId = $module instanceof Module ? $module->id : $module;
+        
+        $this->modules()->detach($moduleId);
+
+        return $this;
+    }
+
+    /**
+     * Check if role has access to module.
+     *
+     * @param Module|string|int $module
+     * @return bool
+     */
+    public function hasModuleAccess(Module|string|int $module): bool
+    {
+        if (is_string($module)) {
+            return $this->modules()
+                ->where('slug', $module)
+                ->wherePivot('has_access', true)
+                ->exists();
+        }
+
+        $moduleId = $module instanceof Module ? $module->id : $module;
+        
+        return $this->modules()
+            ->where('modules.id', $moduleId)
+            ->wherePivot('has_access', true)
+            ->exists();
+    }
+
+    /**
+     * Sync modules for this role.
+     *
+     * @param array $moduleIds Array of module IDs
+     * @param int|null $grantedBy User ID who granted access
+     * @return self
+     */
+    public function syncModules(array $moduleIds, ?int $grantedBy = null): self
+    {
+        $syncData = [];
+        foreach ($moduleIds as $moduleId) {
+            $syncData[$moduleId] = [
+                'organization_id' => $this->organization_id,
+                'has_access' => true,
+                'granted_by' => $grantedBy,
+            ];
+        }
+
+        $this->modules()->sync($syncData);
+
+        return $this;
+    }
+
+    /**
+     * Get all module slugs accessible by this role.
+     *
+     * @return array
+     */
+    public function getModuleSlugs(): array
+    {
+        return $this->modules()
+            ->wherePivot('has_access', true)
+            ->pluck('slug')
+            ->toArray();
+    }
+}

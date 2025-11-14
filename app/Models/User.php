@@ -3,18 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Traits\HasMultiTenantRolesAndPermissions;
+use App\Traits\HasMultiOrganizationRolesAndPermissions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasMultiTenantRolesAndPermissions, SoftDeletes;
+    use HasFactory, Notifiable, HasApiTokens, HasMultiOrganizationRolesAndPermissions, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -41,8 +43,13 @@ class User extends Authenticatable implements JWTSubject
         'bio',
         'preferences',
         'is_active',
+        'is_super_admin',
         'last_login_at',
         'last_login_ip',
+        'email_verification_token',
+        'email_verification_sent_at',
+        'two_factor_enabled',
+        'two_factor_confirmed_at',
     ];
 
     /**
@@ -53,6 +60,9 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'email_verification_token',
     ];
 
     /**
@@ -64,10 +74,14 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'email_verified_at' => 'datetime',
+            'email_verification_sent_at' => 'datetime',
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'preferences' => 'array',
             'is_active' => 'boolean',
+            'is_super_admin' => 'boolean',
+            'two_factor_enabled' => 'boolean',
+            'two_factor_confirmed_at' => 'datetime',
             'last_login_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
@@ -108,6 +122,47 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Check if the user is a super admin.
+     *
+     * @return bool
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_super_admin === true;
+    }
+
+    /**
+     * Check if the user has the global admin role.
+     *
+     * @return bool
+     */
+    public function isGlobalAdmin(): bool
+    {
+        // Check if user has the 'admin' role with organization_id = 'global'
+        return $this->roles()
+            ->where('roles.organization_id', 'global')
+            ->where('slug', 'admin')
+            ->exists();
+    }
+
+    /**
+     * Check if the user can manage global roles and permissions.
+     * Only users with global admin role can manage global roles/permissions.
+     * Super admins are explicitly excluded from managing global resources.
+     *
+     * @return bool
+     */
+    public function canManageGlobalRoles(): bool
+    {
+        // Super admins cannot manage global roles - they only have organization-level access
+        if ($this->isSuperAdmin()) {
+            return false;
+        }
+        
+        return $this->isGlobalAdmin();
+    }
+
+    /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
      * @return mixed
@@ -126,4 +181,394 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
+
+    /**
+     * The teams that the user belongs to.
+     */
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class)
+            ->withPivot('role', 'invited_by', 'joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Teams where user is a leader.
+     */
+    public function leadingTeams(): BelongsToMany
+    {
+        return $this->teams()->whereIn('team_user.role', ['owner', 'admin', 'manager']);
+    }
+
+    /**
+     * Teams where user is owner.
+     */
+    public function ownedTeams(): BelongsToMany
+    {
+        return $this->teams()->wherePivot('role', 'owner');
+    }
+
+    /**
+     * Teams where user is admin.
+     */
+    public function adminTeams(): BelongsToMany
+    {
+        return $this->teams()->wherePivot('role', 'admin');
+    }
+
+    /**
+     * Teams where user is manager.
+     */
+    public function managedTeams(): BelongsToMany
+    {
+        return $this->teams()->wherePivot('role', 'manager');
+    }
+
+    /**
+     * Get teams in a specific organization.
+     */
+    public function teamsInOrganization($organizationId): BelongsToMany
+    {
+        return $this->teams()->where('teams.organization_id', $organizationId);
+    }
+
+    /**
+     * Check if user belongs to a team.
+     */
+    public function belongsToTeam(Team|int $team): bool
+    {
+        $teamId = $team instanceof Team ? $team->id : $team;
+        return $this->teams()->where('team_id', $teamId)->exists();
+    }
+
+    /**
+     * Check if user is a leader of a team.
+     */
+    public function isTeamLeader(Team|int $team): bool
+    {
+        $teamId = $team instanceof Team ? $team->id : $team;
+        return $this->teams()
+            ->where('team_id', $teamId)
+            ->whereIn('team_user.role', ['owner', 'admin', 'manager'])
+            ->exists();
+    }
+
+    /**
+     * Check if user is team owner.
+     */
+    public function isTeamOwner(Team|int $team): bool
+    {
+        $teamId = $team instanceof Team ? $team->id : $team;
+        return $this->teams()
+            ->where('team_id', $teamId)
+            ->wherePivot('role', 'owner')
+            ->exists();
+    }
+
+    /**
+     * Check if user can manage team (owner/admin/manager).
+     */
+    public function canManageTeam(Team|int $team): bool
+    {
+        return $this->isTeamLeader($team);
+    }
+
+    /**
+     * Get user's role in a team.
+     */
+    public function getTeamRole(Team|int $team): ?string
+    {
+        $teamId = $team instanceof Team ? $team->id : $team;
+        $membership = $this->teams()
+            ->where('team_id', $teamId)
+            ->first();
+        
+        return $membership?->pivot->role;
+    }
+
+    // ===================================
+    // Module Access Methods (Hybrid)
+    // ===================================
+
+    /**
+     * Get all accessible module slugs for user in an organization.
+     * Hybrid approach: Team-based + Role-based fallback.
+     *
+     * @param int|string $organizationId
+     * @return array Array of module slugs
+     */
+    public function getAccessibleModules($organizationId): array
+    {
+        // 1. Get organization's enabled modules
+        $orgModules = Organization::find($organizationId)
+            ?->enabledModules()
+            ->pluck('slug')
+            ->toArray() ?? [];
+
+        if (empty($orgModules)) {
+            return [];
+        }
+
+        // 2. Super admins and organization owners/admins get all org modules
+        if ($this->is_super_admin || $this->hasRoleInOrganization(['owner', 'admin'], $organizationId)) {
+            return $orgModules;
+        }
+
+        // 3. Get modules from teams (primary source)
+        $teamModules = $this->getModulesFromTeams($organizationId);
+
+        // 4. Get modules from roles (fallback)
+        $roleModules = $this->getModulesFromRoles($organizationId);
+
+        // 5. Merge team and role modules
+        $userModules = array_unique(array_merge($teamModules, $roleModules));
+
+        // 6. If user has no specific restrictions, give all org modules
+        if (empty($userModules)) {
+            return $orgModules;
+        }
+
+        // 7. Return intersection (only modules that org has AND user can access)
+        return array_values(array_intersect($userModules, $orgModules));
+    }
+
+    /**
+     * Get modules from user's teams in organization.
+     *
+     * @param int|string $organizationId
+     * @return array Array of module slugs
+     */
+    public function getModulesFromTeams($organizationId): array
+    {
+        $teams = $this->teamsInOrganization($organizationId)->get();
+
+        if ($teams->isEmpty()) {
+            return [];
+        }
+
+        $moduleIds = [];
+        foreach ($teams as $team) {
+            // If team has no module restrictions, user gets all org modules
+            if ($team->modules()->count() === 0) {
+                return Organization::find($organizationId)
+                    ?->enabledModules()
+                    ->pluck('slug')
+                    ->toArray() ?? [];
+            }
+            
+            // Add team's assigned modules
+            $teamModuleIds = $team->modules()->pluck('modules.id')->toArray();
+            $moduleIds = array_merge($moduleIds, $teamModuleIds);
+        }
+
+        if (empty($moduleIds)) {
+            return [];
+        }
+
+        // Convert IDs to slugs
+        return Module::whereIn('id', array_unique($moduleIds))
+            ->pluck('slug')
+            ->toArray();
+    }
+
+    /**
+     * Get modules from user's roles in organization.
+     *
+     * @param int|string $organizationId
+     * @return array Array of module slugs
+     */
+    public function getModulesFromRoles($organizationId): array
+    {
+        $roles = $this->rolesInOrganization($organizationId)->get();
+
+        if ($roles->isEmpty()) {
+            return [];
+        }
+
+        $moduleIds = [];
+        foreach ($roles as $role) {
+            // Get modules assigned to this role in this organization
+            $roleModuleIds = DB::table('role_module')
+                ->where('role_id', $role->id)
+                ->where('organization_id', $organizationId)
+                ->where('has_access', true)
+                ->pluck('module_id')
+                ->toArray();
+            
+            $moduleIds = array_merge($moduleIds, $roleModuleIds);
+        }
+
+        if (empty($moduleIds)) {
+            return [];
+        }
+
+        // Convert IDs to slugs
+        return Module::whereIn('id', array_unique($moduleIds))
+            ->pluck('slug')
+            ->toArray();
+    }
+
+    /**
+     * Check if user can access a specific module in organization.
+     *
+     * @param string $moduleSlug
+     * @param int|string $organizationId
+     * @return bool
+     */
+    public function canAccessModule(string $moduleSlug, $organizationId): bool
+    {
+        $accessibleModules = $this->getAccessibleModules($organizationId);
+        return in_array($moduleSlug, $accessibleModules);
+    }
+
+    /**
+     * Check if user has role in organization.
+     *
+     * @param string|array $roleNames
+     * @param int|string $organizationId
+     * @return bool
+     */
+    public function hasRoleInOrganization($roleNames, $organizationId): bool
+    {
+        $roleNames = is_array($roleNames) ? $roleNames : [$roleNames];
+        
+        return $this->rolesInOrganization($organizationId)
+            ->whereIn('name', $roleNames)
+            ->exists();
+    }
+
+    /**
+     * Generate email verification token.
+     *
+     * @return string
+     */
+    public function generateEmailVerificationToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        
+        $this->update([
+            'email_verification_token' => hash('sha256', $token),
+            'email_verification_sent_at' => now(),
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Verify email with token.
+     *
+     * @param string $token
+     * @return bool
+     */
+    public function verifyEmail(string $token): bool
+    {
+        if ($this->email_verified_at) {
+            return false; // Already verified
+        }
+
+        $hashedToken = hash('sha256', $token);
+
+        if ($this->email_verification_token !== $hashedToken) {
+            return false; // Invalid token
+        }
+
+        // Check if token expired (24 hours)
+        if ($this->email_verification_sent_at->addHours(24)->isPast()) {
+            return false; // Expired
+        }
+
+        $this->email_verified_at = now();
+        $this->email_verification_token = null;
+        $this->email_verification_sent_at = null;
+        $this->save();
+
+        return true;
+    }
+
+    /**
+     * Check if email is verified.
+     *
+     * @return bool
+     */
+    public function hasVerifiedEmail(): bool
+    {
+        return !is_null($this->email_verified_at);
+    }
+
+    /**
+     * Enable two-factor authentication.
+     *
+     * @param string $secret
+     * @param array $recoveryCodes
+     * @return void
+     */
+    public function enableTwoFactor(string $secret, array $recoveryCodes): void
+    {
+        $this->two_factor_enabled = true;
+        $this->two_factor_secret = encrypt($secret);
+        $this->two_factor_recovery_codes = encrypt(json_encode($recoveryCodes));
+        $this->two_factor_confirmed_at = now();
+        $this->save();
+    }
+
+    /**
+     * Disable two-factor authentication.
+     *
+     * @return void
+     */
+    public function disableTwoFactor(): void
+    {
+        $this->two_factor_enabled = false;
+        $this->two_factor_secret = null;
+        $this->two_factor_recovery_codes = null;
+        $this->two_factor_confirmed_at = null;
+        $this->save();
+    }
+
+    /**
+     * Get two-factor secret.
+     *
+     * @return string|null
+     */
+    public function getTwoFactorSecret(): ?string
+    {
+        return $this->two_factor_secret ? decrypt($this->two_factor_secret) : null;
+    }
+
+    /**
+     * Get two-factor recovery codes.
+     *
+     * @return array
+     */
+    public function getTwoFactorRecoveryCodes(): array
+    {
+        if (!$this->two_factor_recovery_codes) {
+            return [];
+        }
+
+        return json_decode(decrypt($this->two_factor_recovery_codes), true) ?? [];
+    }
+
+    /**
+     * Use a recovery code.
+     *
+     * @param string $code
+     * @return bool
+     */
+    public function useRecoveryCode(string $code): bool
+    {
+        $codes = $this->getTwoFactorRecoveryCodes();
+        
+        if (!in_array($code, $codes)) {
+            return false;
+        }
+
+        $codes = array_values(array_diff($codes, [$code]));
+        
+        $this->two_factor_recovery_codes = encrypt(json_encode($codes));
+        $this->save();
+
+        return true;
+    }
 }
+

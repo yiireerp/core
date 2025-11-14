@@ -22,17 +22,17 @@ class RoleMiddleware
             ], 401);
         }
 
-        $tenant = $request->attributes->get('tenant') ?? app('tenant', null);
+        $organization = $request->attributes->get('organization') ?? app('organization', null);
 
-        if (!$tenant) {
+        if (!$organization) {
             return response()->json([
                 'message' => 'Tenant context is required.'
             ], 400);
         }
 
-        if (!$request->user()->hasAnyRoleInTenant($roles, $tenant)) {
+        if (!$request->user()->hasAnyRoleInOrganization($roles, $organization)) {
             return response()->json([
-                'message' => 'Unauthorized. Required role(s) in this tenant: ' . implode(', ', $roles)
+                'message' => 'Unauthorized. Required role(s) in this organization: ' . implode(', ', $roles)
             ], 403);
         }
 

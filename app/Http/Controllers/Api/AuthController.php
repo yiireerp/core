@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant;
+use App\Http\Resources\UserResource;
+use App\Http\Resources\OrganizationResource;
+use App\Mail\VerifyEmail;
+use App\Models\RefreshToken;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -38,22 +43,24 @@ class AuthController extends Controller
             'language' => $request->language ?? 'en',
         ]);
 
-        // Assign default 'user' role to new registrations
-        $user->assignRole('user');
+        // Send email verification
+        $token = $user->generateEmailVerificationToken();
+        $verificationUrl = config('app.frontend_url', config('app.url')) 
+            . '/verify-email?token=' . $token 
+            . '&email=' . urlencode($user->email);
+        
+        Mail::to($user->email)->send(new VerifyEmail($user, $verificationUrl));
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Note: Roles are assigned when user joins a tenant via joinOrganization()
+        // New users don't have roles until they're added to an organization
+
+        $authToken = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'access_token' => $token,
+            'access_token' => $authToken,
             'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'full_name' => $user->full_name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-            ],
+            'user' => new UserResource($user),
+            'message' => 'Registration successful. Please check your email to verify your account.',
         ], 201);
     }
 
@@ -62,7 +69,8 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
-            'tenant_id' => 'nullable|string', // Can be UUID or slug
+            'organization_id' => 'nullable|uuid',
+            'two_factor_code' => 'nullable|string',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -73,47 +81,55 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if 2FA is enabled
+        if ($user->two_factor_enabled) {
+            if (!$request->two_factor_code) {
+                return response()->json([
+                    'requires_2fa' => true,
+                    'message' => 'Two-factor authentication code required.',
+                ], 200);
+            }
+
+            // Verify 2FA code
+            $google2fa = new \PragmaRX\Google2FA\Google2FA();
+            $secret = $user->getTwoFactorSecret();
+            
+            // Check if it's a recovery code
+            $valid = false;
+            if (strlen($request->two_factor_code) > 6) {
+                $valid = $user->useRecoveryCode($request->two_factor_code);
+            } else {
+                $valid = $google2fa->verifyKey($secret, $request->two_factor_code);
+            }
+
+            if (!$valid) {
+                return response()->json([
+                    'error' => 'Invalid two-factor authentication code.',
+                ], 401);
+            }
+        }
+
         // Update last login information
         $user->updateLastLogin($request->ip());
 
         // Get all organizations user belongs to
-        $organizations = $user->getActiveTenants()->map(function ($tenant) use ($user) {
-            $roles = $user->rolesInTenant($tenant)->get()->map(function ($role) {
-                return [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                    'slug' => $role->slug,
-                ];
-            });
-
-            $permissions = $user->getAllPermissionsInTenant($tenant)->map(function ($permission) {
-                return [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
-                    'slug' => $permission->slug,
-                ];
-            });
-
+        $organizations = $user->getActiveOrganizations()->map(function ($organization) {
             return [
-                'id' => $tenant->id,
-                'name' => $tenant->name,
-                'slug' => $tenant->slug,
-                'domain' => $tenant->domain,
-                'roles' => $roles,
-                'permissions' => $permissions,
+                'id' => $organization->id,
+                'name' => $organization->name,
+                'slug' => $organization->slug,
+                'domain' => $organization->domain,
             ];
         });
 
         // Determine current organization
         $currentOrganization = null;
-        if ($request->tenant_id) {
-            // Find tenant by UUID or slug
-            $tenant = Tenant::where('id', $request->tenant_id)
-                ->orWhere('slug', $request->tenant_id)
-                ->first();
+        if ($request->organization_id) {
+            // Find tenant by UUID only
+            $organization = Organization::find($request->organization_id);
             
-            if ($tenant && $user->belongsToTenant($tenant)) {
-                $currentOrganization = $organizations->firstWhere('id', $tenant->id);
+            if ($organization && $user->belongsToOrganization($organization)) {
+                $currentOrganization = $organizations->firstWhere('id', $organization->id);
             }
         }
 
@@ -122,43 +138,70 @@ class AuthController extends Controller
             $currentOrganization = $organizations->first();
         }
 
-        // Create JWT token with custom claims
+        // Get roles and permissions as slugs for JWT token
+        $organization = null;
+        if ($currentOrganization) {
+            $organization = Organization::find($currentOrganization['id']);
+        }
+
+        $rolesSlugs = $organization ? $user->rolesInOrganization($organization)->pluck('slug')->toArray() : [];
+        $permissionsSlugs = $organization ? $user->getAllPermissionsInOrganization($organization)->pluck('slug')->toArray() : [];
+        $moduleSlugs = $organization ? $organization->enabledModules()->pluck('slug')->toArray() : [];
+        $teamSlugs = $organization ? $user->teamsInOrganization($organization->id)->pluck('slug')->toArray() : [];
+        $userModuleSlugs = $organization ? $user->getAccessibleModules($organization->id) : [];
+
+        // Create JWT token with custom claims (only slugs)
         $customClaims = [
-            'tenant_id' => $currentOrganization['id'] ?? null,
-            'roles' => $currentOrganization['roles'] ?? [],
-            'permissions' => $currentOrganization['permissions'] ?? [],
+            'organization_id' => $currentOrganization['id'] ?? null,
+            'organization_slug' => $organization?->slug,
+            'is_owner' => $organization ? in_array('owner', $rolesSlugs) : false,
+            'subscription_status' => $organization?->subscription_status ?? 'active',
+            'max_users' => $organization?->max_users ?? 10,
+            'roles' => $rolesSlugs,
+            'permissions' => $permissionsSlugs,
+            'modules' => $moduleSlugs,
+            'teams' => $teamSlugs,
+            'user_modules' => $userModuleSlugs,
         ];
 
         $token = JWTAuth::claims($customClaims)->fromUser($user);
 
+        // Generate refresh token
+        $refreshToken = RefreshToken::generate(
+            $user,
+            $currentOrganization['id'] ?? null,
+            $request->ip(),
+            $request->userAgent()
+        );
+
         return response()->json([
             'access_token' => $token,
+            'refresh_token' => $refreshToken->token,
             'token_type' => 'Bearer',
             'expires_in' => config('jwt.ttl') * 60, // Convert minutes to seconds
-            'user' => [
-                'id' => $user->id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'full_name' => $user->full_name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'avatar' => $user->avatar,
-                'timezone' => $user->timezone,
-                'language' => $user->language,
-            ],
+            'refresh_expires_in' => 14 * 24 * 60 * 60, // 2 weeks in seconds
+            'user' => new UserResource($user),
             'current_organization' => $currentOrganization,
             'organizations' => $organizations,
-        ]);
+        ])->cookie('refresh_token', $refreshToken->token, 14 * 24 * 60, null, null, false, true); // HttpOnly cookie
     }
 
     public function logout(Request $request)
     {
         try {
+            $user = $request->user();
+            
+            // Invalidate JWT access token
             JWTAuth::invalidate(JWTAuth::getToken());
+            
+            // Revoke all refresh tokens for this user
+            RefreshToken::where('user_id', $user->id)
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now()]);
             
             return response()->json([
                 'message' => 'Successfully logged out',
-            ]);
+            ])->cookie('refresh_token', '', -1); // Delete refresh token cookie
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to logout, please try again.',
@@ -167,66 +210,147 @@ class AuthController extends Controller
     }
 
     /**
+     * Refresh JWT access token using refresh token
+     */
+    public function refresh(Request $request)
+    {
+        // Get refresh token from cookie or body
+        $refreshTokenString = $request->cookie('refresh_token') ?? $request->input('refresh_token');
+
+        if (!$refreshTokenString) {
+            return response()->json([
+                'error' => 'Refresh token not provided',
+            ], 401);
+        }
+
+        // Find the refresh token
+        $refreshToken = RefreshToken::where('token', $refreshTokenString)->first();
+
+        if (!$refreshToken) {
+            return response()->json([
+                'error' => 'Invalid refresh token',
+            ], 401);
+        }
+
+        // Check if token is valid
+        if (!$refreshToken->isValid()) {
+            return response()->json([
+                'error' => 'Refresh token has expired or been revoked',
+            ], 401);
+        }
+
+        // Get user and tenant context
+        $user = $refreshToken->user;
+        $tenantId = $refreshToken->organization_id;
+
+        // Get roles and permissions for the tenant
+        $rolesSlugs = [];
+        $permissionsSlugs = [];
+        $moduleSlugs = [];
+        $teamSlugs = [];
+        
+        if ($tenantId) {
+            $organization = Organization::find($tenantId);
+            if ($organization) {
+                $rolesSlugs = $user->rolesInOrganization($organization)->pluck('slug')->toArray();
+                $permissionsSlugs = $user->getAllPermissionsInOrganization($organization)->pluck('slug')->toArray();
+                $moduleSlugs = $organization->enabledModules()->pluck('slug')->toArray();
+                $teamSlugs = $user->teamsInOrganization($organization->id)->pluck('slug')->toArray();
+                $userModuleSlugs = $user->getAccessibleModules($organization->id);
+            }
+        }
+
+        // Create new JWT access token
+        $customClaims = [
+            'organization_id' => $tenantId,
+            'organization_slug' => $organization?->slug,
+            'is_owner' => $organization ? in_array('owner', $rolesSlugs) : false,
+            'subscription_status' => $organization?->subscription_status ?? 'active',
+            'max_users' => $organization?->max_users ?? 10,
+            'roles' => $rolesSlugs,
+            'permissions' => $permissionsSlugs,
+            'modules' => $moduleSlugs,
+            'teams' => $teamSlugs,
+            'user_modules' => $userModuleSlugs,
+        ];
+
+        $newAccessToken = JWTAuth::claims($customClaims)->fromUser($user);
+
+        // Optionally: Generate new refresh token (rotation)
+        $newRefreshToken = RefreshToken::generate(
+            $user,
+            $tenantId,
+            $request->ip(),
+            $request->userAgent()
+        );
+
+        return response()->json([
+            'access_token' => $newAccessToken,
+            'refresh_token' => $newRefreshToken->token,
+            'token_type' => 'Bearer',
+            'expires_in' => config('jwt.ttl') * 60,
+            'refresh_expires_in' => 14 * 24 * 60 * 60,
+            'user' => new UserResource($user),
+            'organization_id' => $tenantId,
+            'roles' => $rolesSlugs,
+            'permissions' => $permissionsSlugs,
+        ])->cookie('refresh_token', $newRefreshToken->token, 14 * 24 * 60, null, null, false, true);
+    }
+
+    /**
      * Switch to a different organization and get new JWT token
      */
     public function switchOrganization(Request $request)
     {
         $request->validate([
-            'tenant_id' => 'required|string', // Can be UUID or slug
+            'organization_id' => 'required|uuid',
         ]);
 
         $user = $request->user();
         
-        // Find tenant by UUID or slug
-        $tenant = Tenant::where('id', $request->tenant_id)
-            ->orWhere('slug', $request->tenant_id)
-            ->first();
+        // Find tenant by UUID only
+        $organization = Organization::find($request->organization_id);
 
-        if (!$tenant) {
+        if (!$organization) {
             return response()->json([
                 'error' => 'Organization not found.',
             ], 404);
         }
 
-        if (!$user->belongsToTenant($tenant)) {
+        if (!$user->belongsToOrganization($organization)) {
             return response()->json([
                 'error' => 'You do not have access to this organization.',
             ], 403);
         }
 
-        // Get roles and permissions for the new organization
-        $roles = $user->rolesInTenant($tenant)->get()->map(function ($role) {
-            return [
-                'id' => $role->id,
-                'name' => $role->name,
-                'slug' => $role->slug,
-            ];
-        });
-
-        $permissions = $user->getAllPermissionsInTenant($tenant)->map(function ($permission) {
-            return [
-                'id' => $permission->id,
-                'name' => $permission->name,
-                'slug' => $permission->slug,
-            ];
-        });
+        // Get roles and permissions as slugs only for JWT token
+        $rolesSlugs = $user->rolesInOrganization($organization)->pluck('slug')->toArray();
+        $permissionsSlugs = $user->getAllPermissionsInOrganization($organization)->pluck('slug')->toArray();
+        $moduleSlugs = $organization->enabledModules()->pluck('slug')->toArray();
+        $teamSlugs = $user->teamsInOrganization($organization->id)->pluck('slug')->toArray();
+        $userModuleSlugs = $user->getAccessibleModules($organization->id);
 
         $currentOrganization = [
-            'id' => $tenant->id,
-            'name' => $tenant->name,
-            'slug' => $tenant->slug,
-            'domain' => $tenant->domain,
-            'roles' => $roles,
-            'permissions' => $permissions,
+            'id' => $organization->id,
+            'name' => $organization->name,
+            'slug' => $organization->slug,
+            'domain' => $organization->domain,
         ];
 
         // Invalidate old token and create new one with updated organization context
         JWTAuth::invalidate(JWTAuth::getToken());
 
         $customClaims = [
-            'tenant_id' => $currentOrganization['id'],
-            'roles' => $currentOrganization['roles'],
-            'permissions' => $currentOrganization['permissions'],
+            'organization_id' => $currentOrganization['id'],
+            'organization_slug' => $organization->slug,
+            'is_owner' => in_array('owner', $rolesSlugs),
+            'subscription_status' => $organization->subscription_status ?? 'active',
+            'max_users' => $organization->max_users ?? 10,
+            'roles' => $rolesSlugs,
+            'permissions' => $permissionsSlugs,
+            'modules' => $moduleSlugs,
+            'teams' => $teamSlugs,
+            'user_modules' => $userModuleSlugs,
         ];
 
         $token = JWTAuth::claims($customClaims)->fromUser($user);
@@ -236,7 +360,7 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'expires_in' => config('jwt.ttl') * 60,
             'current_organization' => $currentOrganization,
-            'message' => 'Successfully switched to ' . $tenant->name,
+            'message' => 'Successfully switched to ' . $organization->name,
         ]);
     }
 
@@ -247,23 +371,18 @@ class AuthController extends Controller
         // Get JWT token payload to extract current organization
         try {
             $payload = JWTAuth::parseToken()->getPayload();
-            $tenantId = $payload->get('tenant_id');
+            $tenantId = $payload->get('organization_id');
             
             if ($tenantId) {
-                $tenant = Tenant::find($tenantId);
+                $organization = Organization::find($tenantId);
                 
-                if ($tenant && $user->belongsToTenant($tenant)) {
+                if ($organization && $user->belongsToOrganization($organization)) {
                     return response()->json([
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'current_organization' => [
-                            'id' => $tenant->id,
-                            'name' => $tenant->name,
-                            'slug' => $tenant->slug,
-                            'roles' => $payload->get('roles', []),
-                            'permissions' => $payload->get('permissions', []),
-                        ],
+                        'user' => new UserResource($user),
+                        'current_organization' => new OrganizationResource($organization),
+                        'roles' => $payload->get('roles', []),
+                        'permissions' => $payload->get('permissions', []),
+                        'modules' => $payload->get('modules', []),
                     ]);
                 }
             }
@@ -272,26 +391,7 @@ class AuthController extends Controller
         }
         
         return response()->json([
-            'id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'full_name' => $user->full_name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'avatar' => $user->avatar,
-            'date_of_birth' => $user->date_of_birth,
-            'gender' => $user->gender,
-            'address_line1' => $user->address_line1,
-            'address_line2' => $user->address_line2,
-            'city' => $user->city,
-            'state' => $user->state,
-            'postal_code' => $user->postal_code,
-            'country' => $user->country,
-            'timezone' => $user->timezone,
-            'language' => $user->language,
-            'bio' => $user->bio,
-            'is_active' => $user->is_active,
-            'last_login_at' => $user->last_login_at,
+            'user' => new UserResource($user),
         ]);
     }
 }

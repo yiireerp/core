@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RoleResource;
 use App\Models\Role;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -12,10 +14,10 @@ class RoleController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $roles = Role::with('permissions')->get();
-        return response()->json($roles);
+        $roles = Role::with('permissions')->paginate($request->get('per_page', 15));
+        return RoleResource::collection($roles);
     }
 
     /**
@@ -25,13 +27,32 @@ class RoleController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:roles',
+            'slug' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'organization_id' => 'nullable|string|max:50', // Can be UUID, 'global', or null
         ]);
+
+        // Check if role already exists with this slug and organization_id
+        $existingRole = Role::where('slug', $request->slug)
+            ->where('organization_id', $request->organization_id)
+            ->first();
+
+        if ($existingRole) {
+            return response()->json([
+                'error' => 'A role with this slug already exists for this tenant'
+            ], 422);
+        }
+
+        // Only global admins can create global roles (organization_id = null or 'global')
+        if ((is_null($request->organization_id) || $request->organization_id === 'global') && !$request->user()->canManageGlobalRoles()) {
+            return response()->json([
+                'error' => 'Only global admins can create global roles'
+            ], 403);
+        }
 
         $role = Role::create($request->all());
 
-        return response()->json($role, 201);
+        return new RoleResource($role->load('permissions'));
     }
 
     /**
@@ -40,7 +61,7 @@ class RoleController extends Controller
     public function show(string $id)
     {
         $role = Role::with('permissions', 'users')->findOrFail($id);
-        return response()->json($role);
+        return new RoleResource($role);
     }
 
     /**
@@ -52,13 +73,35 @@ class RoleController extends Controller
 
         $request->validate([
             'name' => 'sometimes|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:roles,slug,' . $id,
+            'slug' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
+            'organization_id' => 'nullable|string|max:50',
         ]);
+
+        // Check for duplicate slug
+        if ($request->has('slug')) {
+            $existingRole = Role::where('slug', $request->slug)
+                ->where('organization_id', $request->organization_id ?? $role->organization_id)
+                ->where('id', '!=', $id)
+                ->first();
+
+            if ($existingRole) {
+                return response()->json([
+                    'error' => 'A role with this slug already exists for this tenant'
+                ], 422);
+            }
+        }
+
+        // Only global admins can update to global roles (organization_id = null or 'global')
+        if ($request->has('organization_id') && (is_null($request->organization_id) || $request->organization_id === 'global') && !$request->user()->canManageGlobalRoles()) {
+            return response()->json([
+                'error' => 'Only global admins can create or update global roles'
+            ], 403);
+        }
 
         $role->update($request->all());
 
-        return response()->json($role);
+        return new RoleResource($role->load('permissions'));
     }
 
     /**
@@ -81,12 +124,42 @@ class RoleController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'organization_id' => ['required', 'string', function ($attribute, $value, $fail) {
+                if ($value !== 'global' && !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value)) {
+                    $fail('The organization id must be a valid UUID or "global".');
+                }
+                if (!Organization::where('id', $value)->exists()) {
+                    $fail('The selected organization id is invalid.');
+                }
+            }],
         ]);
 
         $role = Role::findOrFail($roleId);
         $user = User::findOrFail($request->user_id);
+        $organization = Organization::findOrFail($request->organization_id);
 
-        $user->assignRole($role);
+        // Only super admins can assign the superadmin role
+        if ($role->slug === 'superadmin' && !$request->user()->isSuperAdmin()) {
+            return response()->json([
+                'error' => 'Only super admins can assign the superadmin role'
+            ], 403);
+        }
+
+        // Only global admins can assign global roles (including global admin role)
+        if (($role->organization_id === 'global' || is_null($role->organization_id)) && !$request->user()->canManageGlobalRoles()) {
+            return response()->json([
+                'error' => 'Only global admins can assign global roles'
+            ], 403);
+        }
+
+        // Verify role belongs to the tenant or is global
+        if ($role->organization_id !== $organization->id && $role->organization_id !== 'global' && !is_null($role->organization_id)) {
+            return response()->json([
+                'error' => 'Role does not belong to this tenant'
+            ], 400);
+        }
+
+        $user->assignRoleInOrganization($role, $organization);
 
         return response()->json([
             'message' => 'Role assigned successfully',
@@ -101,12 +174,21 @@ class RoleController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'organization_id' => 'required|uuid|exists:tenants,id',
         ]);
 
         $role = Role::findOrFail($roleId);
         $user = User::findOrFail($request->user_id);
+        $organization = Organization::findOrFail($request->organization_id);
 
-        $user->removeRole($role);
+        // Verify role belongs to the tenant
+        if ($role->organization_id !== $organization->id) {
+            return response()->json([
+                'error' => 'Role does not belong to this tenant'
+            ], 400);
+        }
+
+        $user->removeRoleInOrganization($role, $organization);
 
         return response()->json([
             'message' => 'Role removed successfully',

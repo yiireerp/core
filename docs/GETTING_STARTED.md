@@ -166,38 +166,38 @@ For detailed documentation, see:
 - `ROLES_AND_PERMISSIONS.md` - Full documentation
 - `QUICK_REFERENCE.md` - Quick reference guide
 - `AUTH_API_DOCUMENTATION.md` - Authentication API docs
-# UUID Implementation for Tenant IDs
+# UUID Implementation for Organization IDs
 
 ## Summary
 
-Tenant IDs are now **UUIDs** instead of auto-incrementing integers for enhanced security and privacy.
+Organization IDs are now **UUIDs** instead of auto-incrementing integers for enhanced security and privacy.
 
 ## Changes Made
 
-### 1. Tenant Model
+### 1. Organization Model
 - Added `HasUuids` trait
 - Set `$incrementing = false`
 - Set `$keyType = 'string'`
 
 ### 2. Database Migrations
 
-**Tenants Table:**
+**Organizations Table:**
 ```php
 $table->uuid('id')->primary();  // Instead of $table->id()
 ```
 
 **Foreign Keys:**
 ```php
-// All tenant_id foreign keys updated to:
-$table->uuid('tenant_id')->nullable();
-$table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
+// All organization_id foreign keys updated to:
+$table->uuid('organization_id')->nullable();
+$table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
 ```
 
 **Affected Tables:**
-- `tenant_user` - Many-to-many user-tenant relationship
-- `roles` - Roles scoped to tenants
-- `permissions` - Permissions scoped to tenants
-- `role_user` - User role assignments per tenant
+- `organization_user` - Many-to-many user-organization relationship
+- `roles` - Roles scoped to organizations
+- `permissions` - Permissions scoped to organizations
+- `role_user` - User role assignments per organization
 
 ## Example UUIDs
 
@@ -211,23 +211,23 @@ TechStart Inc:     019a77ec-851b-7106-a6b9-a93e00b91358
 ### 1. Prevents Enumeration Attacks
 **Before (Auto-increment):**
 ```bash
-# Attacker can easily discover all tenants
-curl /api/tenants/1
-curl /api/tenants/2
-curl /api/tenants/3
+# Attacker can easily discover all organizations
+curl /api/organizations/1
+curl /api/organizations/2
+curl /api/organizations/3
 # Reveals: "You have at least 3 customers"
 ```
 
 **After (UUID):**
 ```bash
-# Impossible to guess next tenant ID
-curl /api/tenants/019a77ec-851a-7028-8f56-5f31232cdf72
-curl /api/tenants/019a77ec-851b-7106-a6b9-a93e00b91358
-# Cannot determine total number of tenants
+# Impossible to guess next organization ID
+curl /api/organizations/019a77ec-851a-7028-8f56-5f31232cdf72
+curl /api/organizations/019a77ec-851b-7106-a6b9-a93e00b91358
+# Cannot determine total number of organizations
 ```
 
 ### 2. Hides Business Metrics
-- Auto-increment IDs reveal growth rate (ID 1000 → ID 1500 = 500 new tenants)
+- Auto-increment IDs reveal growth rate (ID 1000 → ID 1500 = 500 new organizations)
 - UUIDs keep your business metrics private
 
 ### 3. Safe for Public Exposure
@@ -245,18 +245,18 @@ curl /api/tenants/019a77ec-851b-7106-a6b9-a93e00b91358
 ### Using UUID in Requests
 
 ```bash
-# Get tenant by UUID
-GET /api/tenants/019a77ec-851a-7028-8f56-5f31232cdf72
+# Get organization by UUID
+GET /api/organizations/019a77ec-851a-7028-8f56-5f31232cdf72
 
-# Set tenant context with UUID
+# Set organization context with UUID
 curl -X GET http://localhost:8000/api/roles \
   -H "Authorization: Bearer TOKEN" \
-  -H "X-Tenant-ID: 019a77ec-851a-7028-8f56-5f31232cdf72"
+  -H "X-Organization-ID: 019a77ec-851a-7028-8f56-5f31232cdf72"
 
 # Or use the slug (still supported for convenience)
 curl -X GET http://localhost:8000/api/roles \
   -H "Authorization: Bearer TOKEN" \
-  -H "X-Tenant-ID: acme"
+  -H "X-Organization-ID: acme"
 ```
 
 ### Login Response
@@ -265,7 +265,7 @@ curl -X GET http://localhost:8000/api/roles \
 {
   "access_token": "...",
   "user": {...},
-  "tenants": [
+  "organizations": [
     {
       "id": "019a77ec-851a-7028-8f56-5f31232cdf72",
       "name": "Acme Corporation",
@@ -282,16 +282,16 @@ curl -X GET http://localhost:8000/api/roles \
 
 ## Code Examples
 
-### Creating a Tenant (UUID auto-generated)
+### Creating a Organization (UUID auto-generated)
 
 ```php
-$tenant = Tenant::create([
+$organization = Organization::create([
     'name' => 'New Company',
     'slug' => 'new-company',
     // No need to specify 'id' - UUID is auto-generated
 ]);
 
-echo $tenant->id; 
+echo $organization->id; 
 // Output: 019a77ec-8520-7abc-def0-123456789abc
 ```
 
@@ -299,10 +299,10 @@ echo $tenant->id;
 
 ```php
 // Find by UUID
-$tenant = Tenant::find('019a77ec-851a-7028-8f56-5f31232cdf72');
+$organization = Organization::find('019a77ec-851a-7028-8f56-5f31232cdf72');
 
 // Or find by slug (if you need it)
-$tenant = Tenant::where('slug', 'acme')->first();
+$organization = Organization::where('slug', 'acme')->first();
 ```
 
 ### Relationships with UUIDs
@@ -310,14 +310,14 @@ $tenant = Tenant::where('slug', 'acme')->first();
 ```php
 // All relationships work transparently
 $role = Role::create([
-    'tenant_id' => '019a77ec-851a-7028-8f56-5f31232cdf72',
+    'organization_id' => '019a77ec-851a-7028-8f56-5f31232cdf72',
     'name' => 'Manager',
     'slug' => 'manager',
 ]);
 
 // Eloquent relationships handle UUIDs automatically
-$tenant = Tenant::find('019a77ec-851a-7028-8f56-5f31232cdf72');
-$roles = $tenant->roles; // Works perfectly
+$organization = Organization::find('019a77ec-851a-7028-8f56-5f31232cdf72');
+$roles = $organization->roles; // Works perfectly
 ```
 
 ## Migration Strategy
@@ -343,10 +343,10 @@ If you already have data with integer IDs, you would need to:
 
 **Indexing:**
 - UUIDs are slightly slower for indexing than integers
-- **Impact:** Negligible for tenant tables (low write volume)
+- **Impact:** Negligible for organization tables (low write volume)
 
 **Best Practices:**
-- Use UUIDs for tenants, users, and other publicly-exposed entities
+- Use UUIDs for organizations, users, and other publicly-exposed entities
 - Use integers for high-volume internal tables if needed
 - Laravel's `HasUuids` trait uses ordered UUIDs (ULID-style) for better performance
 
@@ -355,24 +355,24 @@ If you already have data with integer IDs, you would need to:
 Verify UUID implementation:
 
 ```bash
-# Check tenant UUIDs in database
+# Check organization UUIDs in database
 php artisan tinker
->>> Tenant::all()->pluck('id', 'name')
+>>> Organization::all()->pluck('id', 'name')
 => Illuminate\Support\Collection {
      "Acme Corporation": "019a77ec-851a-7028-8f56-5f31232cdf72",
      "TechStart Inc": "019a77ec-851b-7106-a6b9-a93e00b91358",
    }
 
 # Test API with UUID
-curl -X GET http://localhost:8000/api/tenants/019a77ec-851a-7028-8f56-5f31232cdf72 \
+curl -X GET http://localhost:8000/api/organizations/019a77ec-851a-7028-8f56-5f31232cdf72 \
   -H "Authorization: Bearer TOKEN"
 ```
 
 ## Conclusion
 
-✅ **Implemented:** All tenant IDs are now UUIDs  
+✅ **Implemented:** All organization IDs are now UUIDs  
 ✅ **Secure:** Cannot be enumerated or guessed  
 ✅ **Production-ready:** Safe for public APIs  
 ✅ **Future-proof:** Ready for distributed systems  
 
-Your multi-tenant authorization microservice is now **production-grade** with enterprise-level security!
+Your multi-organization authorization microservice is now **production-grade** with enterprise-level security!
