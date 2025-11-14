@@ -621,6 +621,7 @@ curl -X POST http://localhost:8000/api/login \---
 - **[API Reference](docs/API_REFERENCE.md)** - Complete endpoint documentation
 - **[User Management](docs/USER_MANAGEMENT.md)** - Profile management features
 - **[Multi-Organization Guide](docs/MULTI_ORGANIZATION.md)** - Organization and RBAC management
+- **[Microservice Skeleton Guide](docs/MICROSERVICE_SKELETON_GUIDE.md)** - Create new microservices based on this architecture
 - **[Postman Collection](postman_collection.json)** - Ready-to-use API requests
 
 ## 🛠️ Technology Stack
